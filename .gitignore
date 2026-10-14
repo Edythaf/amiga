@@ -1,0 +1,25 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Secrets and local credentials
+.env
+.env.*
+!.env.example
+.aws/
+
+# Local app data and uploaded documents
+instance/
+uploads/
+storage/
+backend/uploads/
+backend/storage/
+
+# Local databases
+*.sqlite
+*.sqlite3
+*.db/bedrock-request.json
+/bedrock-request-nova.json
+/bedrock-request.json

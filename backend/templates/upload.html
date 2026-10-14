@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AMIGA | Review Invoice</title>
+    <style>
+        :root {
+            --navy: #14243a;
+            --blue: #2563eb;
+            --blue-dark: #1d4ed8;
+            --blue-soft: #eff6ff;
+            --text: #243247;
+            --muted: #718096;
+            --border: #e3e9f2;
+            --surface: #fff;
+            --background: #f5f7fb;
+            --green: #16845b;
+            --green-soft: #eaf7f1;
+            --amber: #9a6700;
+            --amber-soft: #fff6e5;
+            --red: #b42318;
+            --red-soft: #fef3f2;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: var(--background);
+            color: var(--text);
+            font-family: Inter, "Segoe UI", Arial, sans-serif;
+        }
+
+        button, input { font: inherit; }
+
+        .topbar {
+            min-height: 68px;
+            display: flex;
+            align-items: center;
+            padding: 0 32px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            color: var(--navy);
+            font-size: 17px;
+            font-weight: 750;
+        }
+
+        .brand-mark {
+            width: 34px;
+            height: 34px;
+            display: grid;
+            place-items: center;
+            border-radius: 10px;
+            background: var(--blue);
+            color: white;
+        }
+
+        .brand-divider {
+            width: 1px;
+            height: 24px;
+            margin: 0 3px;
+            background: var(--border);
+        }
+
+        .brand-section {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        main {
+            width: min(1480px, 100%);
+            margin: 0 auto;
+            padding: 32px 32px 48px;
+        }
+
+        .page-heading { margin-bottom: 22px; }
+
+        .eyebrow {
+            margin: 0 0 7px;
+            color: var(--blue);
+            font-size: 11px;
+            font-weight: 750;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        h1, h2, h3, p { margin-top: 0; }
+
+        .page-heading h1 {
+            margin-bottom: 7px;
+            color: var(--navy);
+            font-size: clamp(25px, 3vw, 32px);
+            letter-spacing: -.5px;
+        }
+
+        .page-heading p:last-child {
+            margin-bottom: 0;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .card {
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            background: var(--surface);
+            box-shadow: 0 8px 24px rgb(20 36 58 / 4%);
+        }
+
+        .upload-card { padding: 22px; margin-bottom: 18px; }
+        .upload-card h2 { margin-bottom: 6px; color: var(--navy); font-size: 16px; }
+        .section-caption { margin-bottom: 16px; color: var(--muted); font-size: 13px; }
+
+        .upload-form { display: flex; align-items: center; gap: 12px; }
+        .file-picker { position: relative; flex: 1; min-width: 0; }
+
+        .file-picker input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+        }
+
+        .file-picker label {
+            min-height: 52px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 9px 13px;
+            border: 1px dashed #bdc9da;
+            border-radius: 10px;
+            background: #fbfcfe;
+            cursor: pointer;
+        }
+
+        .file-picker:focus-within label,
+        .file-picker label:hover {
+            border-color: var(--blue);
+            background: #f7faff;
+        }
+
+        .file-icon {
+            width: 34px;
+            height: 34px;
+            display: grid;
+            flex: 0 0 34px;
+            place-items: center;
+            border-radius: 9px;
+            background: var(--blue-soft);
+            color: var(--blue);
+            font-size: 18px;
+        }
+
+        .file-copy { min-width: 0; }
+
+        .file-copy strong,
+        .file-copy span {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-copy strong { color: var(--text); font-size: 13px; }
+        .file-copy span { margin-top: 3px; color: var(--muted); font-size: 12px; }
+
+        .button {
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 0 17px;
+            border: 1px solid transparent;
+            border-radius: 9px;
+            font-size: 13px;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background .15s ease, transform .15s ease;
+        }
+
+        .button:active { transform: translateY(1px); }
+        .button-primary { background: var(--blue); color: white; }
+        .button-primary:hover { background: var(--blue-dark); }
+        .button-secondary { border-color: var(--border); background: white; color: var(--navy); }
+        .button-secondary:hover { background: #f7f9fc; }
+        .button:disabled { cursor: wait; opacity: .7; }
+
+        .alert {
+            margin-bottom: 18px;
+            padding: 13px 15px;
+            border: 1px solid #f5c5c1;
+            border-radius: 10px;
+            background: var(--red-soft);
+            color: var(--red);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .document-card {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 17px 19px;
+            margin-bottom: 18px;
+        }
+
+        .document-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
+        .document-icon {
+            width: 42px;
+            height: 42px;
+            display: grid;
+            flex: 0 0 42px;
+            place-items: center;
+            border-radius: 11px;
+            background: var(--blue-soft);
+            color: var(--blue);
+        }
+
+        .document-name {
+            margin: 0;
+            color: var(--navy);
+            font-size: 14px;
+            font-weight: 700;
+            overflow-wrap: anywhere;
+        }
+
+        .document-subtitle { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+        .upload-time { display: inline-block; margin-top: 7px; color: var(--muted); font-size: 12px; }
+        .extract-form { margin: 0; }
+
+        .review-summary {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            margin: 22px 0 13px;
+        }
+
+        .review-summary h2 { margin: 0; color: var(--navy); font-size: 17px; }
+        .review-summary p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+        .timing-list { display: flex; flex-wrap: wrap; gap: 7px; }
+
+        .timing-chip {
+            padding: 7px 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: white;
+            color: #536277;
+            font-size: 12px;
+        }
+
+        .timing-chip strong { color: var(--navy); }
+
+        .review-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 16px;
+        }
+
+        .panel { min-width: 0; }
+
+        .panel-header {
+            min-height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 13px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-title { margin: 0; color: var(--navy); font-size: 14px; font-weight: 700; }
+        .panel-meta { color: var(--muted); font-size: 11px; text-align: right; overflow-wrap: anywhere; }
+        .viewer, .extracted-text { height: min(65vh, 720px); min-height: 400px; background: #f8fafc; }
+
+        .viewer iframe,
+        .viewer img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            object-fit: contain;
+        }
+
+        .viewer-fallback {
+            height: 100%;
+            display: grid;
+            place-content: center;
+            gap: 12px;
+            padding: 22px;
+            color: var(--muted);
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .viewer-fallback a { color: var(--blue); font-weight: 700; text-decoration: none; }
+
+        .extracted-text {
+            margin: 0;
+            padding: 18px;
+            overflow: auto;
+            background: white;
+            color: #26364b;
+            font: 13px/1.7 "Segoe UI", Arial, sans-serif;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        .invoice-card { margin-top: 17px; }
+        .review-note { margin: 14px 17px 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 9px;
+            border-radius: 999px;
+            background: var(--green-soft);
+            color: var(--green);
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .status-badge.review { background: var(--amber-soft); color: var(--amber); }
+
+        .invoice-details {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            padding: 16px;
+        }
+
+        .invoice-field {
+            min-width: 0;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            background: #fbfcfe;
+        }
+
+        .invoice-field label {
+            display: block;
+            margin: 0 0 5px;
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .review-input {
+            width: 100%;
+            min-width: 0;
+            padding: 6px 7px;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            background: transparent;
+            color: var(--navy);
+            font: inherit;
+            font-size: 13px;
+            font-weight: 650;
+        }
+
+        .review-input[readonly] { cursor: default; }
+        .review-input:not([readonly]) { border-color: #b9c7db; background: white; }
+        .invoice-subsection { padding: 0 16px 16px; }
+
+        .subsection-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 9px;
+        }
+
+        .subsection-heading h3 { margin: 0; color: var(--navy); font-size: 13px; }
+
+        .small-button {
+            padding: 6px 9px;
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            background: white;
+            color: var(--text);
+            font-size: 11px;
+            font-weight: 650;
+            cursor: pointer;
+        }
+
+        .small-button:hover { background: #f7f9fc; }
+        .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 9px; }
+        .line-items-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+
+        .line-items-table th,
+        .line-items-table td {
+            padding: 8px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .line-items-table th { background: #f7f9fc; color: #536277; font-size: 10px; text-transform: uppercase; }
+        .line-items-table tr:last-child td { border-bottom: 0; }
+        .line-items-table .number { text-align: right; }
+        .line-items-table .review-input { min-width: 82px; text-align: inherit; }
+        .item-action { width: 1%; white-space: nowrap; }
+
+        .validation-issues {
+            margin: 0 16px 16px;
+            padding: 11px 13px;
+            border: 1px solid #f4d28b;
+            border-radius: 9px;
+            background: #fff9eb;
+            color: #805b12;
+            font-size: 12px;
+            line-height: 1.55;
+        }
+
+        .validation-issues ul { margin: 6px 0 0; padding-left: 18px; }
+        .review-actions { display: flex; justify-content: flex-end; gap: 9px; padding: 0 16px 16px; }
+        .voucher-actions { display: flex; justify-content: flex-end; padding: 0 16px 16px; }
+        [hidden] { display: none !important; }
+
+        @media (max-width: 900px) {
+            .topbar { padding: 0 20px; }
+            main { padding: 26px 20px 40px; }
+            .review-grid { grid-template-columns: 1fr; }
+            .viewer, .extracted-text { height: 55vh; min-height: 330px; }
+            .invoice-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
+        @media (max-width: 600px) {
+            .topbar { min-height: 60px; padding: 0 15px; }
+            main { padding: 21px 13px 32px; }
+            .upload-card { padding: 17px; }
+            .upload-form { align-items: stretch; flex-direction: column; }
+            .invoice-details { grid-template-columns: 1fr; padding: 13px; }
+            .review-actions { flex-direction: column-reverse; }
+            .review-actions .button, .upload-form .button, .extract-form .button { width: 100%; }
+            .document-card { align-items: stretch; }
+            .extract-form { width: 100%; }
+            .timing-list { width: 100%; }
+            .timing-chip { white-space: normal; }
+            .review-actions, .voucher-actions { padding-right: 13px; padding-left: 13px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand">
+            <span class="brand-mark">A</span>
+            <span>AMIGA</span>
+            <span class="brand-divider"></span>
+            <span class="brand-section">Document Review</span>
+        </div>
+    </header>
+
+    <main>
+        <section class="page-heading">
+            <p class="eyebrow">Document workspace</p>
+            <h1>Review Dokumen</h1>
+            <p>Bandingkan dokumen asli dengan hasil ekstraksi, lalu periksa data invoice.</p>
+        </section>
+
+        {% if error is defined and error %}
+            <div class="alert" role="alert">{{ error }}</div>
+        {% endif %}
+
+        <section class="card upload-card">
+            <h2>Upload dokumen</h2>
+            <p class="section-caption">Format yang didukung: PDF, JPG, JPEG, PNG, dan WEBP.</p>
+            <form
+                id="uploadForm"
+                class="upload-form"
+                method="POST"
+                action="{{ url_for('upload.upload_page') }}"
+                enctype="multipart/form-data"
+                data-loading-text="Mengunggah..."
+            >
+                <input type="hidden" name="csrf_token" value="{{ token }}">
+                <div class="file-picker">
+                    <input
+                        id="documentInput"
+                        type="file"
+                        name="document"
+                        accept=".pdf,.jpg,.jpeg,.png,.webp"
+                        required
+                    >
+                    <label for="documentInput">
+                        <span class="file-icon" aria-hidden="true">↑</span>
+                        <span class="file-copy">
+                            <strong id="fileName">Pilih dokumen untuk di-upload</strong>
+                            <span>PDF atau gambar</span>
+                        </span>
+                    </label>
+                </div>
+                <button class="button button-primary" type="submit">Upload dokumen</button>
+            </form>
+        </section>
+
+        {% if result %}
+            {% set display_name = result.get("original_filename") or result.get("filename") or result.get("stored_filename") or "Dokumen" %}
+
+            {% if extracted_text is defined and extracted_text %}
+                <section class="review-summary">
+                    <div>
+                        <h2>Hasil review</h2>
+                        <p>{{ display_name }}</p>
+                    </div>
+                    <div class="timing-list">
+                        {% if upload_time is defined and upload_time is not none %}
+                            <span class="timing-chip">Upload <strong>{{ "%.2f"|format(upload_time|float) }} dtk</strong></span>
+                        {% endif %}
+                        {% if extraction_time is defined and extraction_time is not none %}
+                            <span class="timing-chip">Ekstraksi <strong>{{ "%.2f"|format(extraction_time|float) }} dtk</strong></span>
+                        {% endif %}
+                        {% if invoice_time is defined and invoice_time is not none %}
+                            <span class="timing-chip">Data invoice <strong>{{ "%.2f"|format(invoice_time|float) }} dtk</strong></span>
+                        {% endif %}
+                        {% if processing_time is defined and processing_time is not none %}
+                            <span class="timing-chip">Total proses <strong>{{ "%.2f"|format(processing_time|float) }} dtk</strong></span>
+                        {% endif %}
+                    </div>
+                </section>
+
+                <section class="review-grid">
+                    <article class="card panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">Dokumen asli</h2>
+                            <span class="panel-meta">{{ display_name }}</span>
+                        </div>
+                        <div class="viewer">
+                            {% if original_file_url %}
+                                {% set extension = display_name.lower().rsplit(".", 1)[-1] %}
+                                {% if extension in ["png", "jpg", "jpeg", "webp"] %}
+                                    <img src="{{ original_file_url }}" alt="Dokumen invoice asli">
+                                {% elif extension == "pdf" %}
+                                    <iframe src="{{ original_file_url }}" title="Preview dokumen PDF asli"></iframe>
+                                {% else %}
+                                    <div class="viewer-fallback">
+                                        <span>Preview format dokumen ini tidak tersedia.</span>
+                                        <a href="{{ original_file_url }}" target="_blank" rel="noopener">Buka dokumen asli</a>
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <div class="viewer-fallback">Preview dokumen tidak tersedia.</div>
+                            {% endif %}
+                        </div>
+                    </article>
+
+                    <article class="card panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">Teks hasil ekstraksi</h2>
+                            {% set current_validation = validation if validation is defined and validation else result.get("validation") %}
+                            {% if current_validation %}
+                                {% if current_validation.get("valid") %}
+                                    <span class="status-badge">Siap ditinjau</span>
+                                {% else %}
+                                    <span class="status-badge review">Perlu review</span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <pre class="extracted-text">{{ extracted_text }}</pre>
+                    </article>
+                </section>
+
+                {% if invoice_data is defined and invoice_data %}
+                    <section class="card invoice-card">
+                        <div class="panel-header">
+                            <h2 class="panel-title">Data invoice untuk direview</h2>
+                            {% if result.get("status") == "APPROVED" %}
+                                <span class="status-badge">Invoice disetujui</span>
+                            {% else %}
+                                <span class="status-badge review">Bandingkan dengan dokumen asli</span>
+                            {% endif %}
+                        </div>
+                        <p class="review-note">
+                            Periksa dan edit data yang kurang jelas. Data pajak mengikuti informasi pada invoice; belum dihitung atau ditentukan jenisnya.
+                        </p>
+
+                        <form
+                            id="invoiceReviewForm"
+                            method="POST"
+                            action="{{ url_for('upload.review_invoice', document_id=result.get('document_id')) }}"
+                            data-loading-text="Menyimpan..."
+                        >
+                            <input type="hidden" name="csrf_token" value="{{ token }}">
+                            <input type="hidden" name="line_items_submitted" value="1">
+
+                            {% set invoice_fields = [
+                                ("invoice_number", "Nomor invoice"),
+                                ("invoice_date", "Tanggal invoice"),
+                                ("due_date", "Jatuh tempo"),
+                                ("purchase_order_number", "Nomor purchase order"),
+                                ("supplier_name", "Pemasok / penerima"),
+                                ("supplier_address", "Alamat pemasok"),
+                                ("customer_name", "Pembeli"),
+                                ("customer_address", "Alamat pembeli"),
+                                ("purpose", "Peruntukan"),
+                                ("service_period", "Periode barang / jasa"),
+                                ("payment_method", "Metode pembayaran"),
+                                ("supplier_bank_name", "Nama bank pemasok"),
+                                ("supplier_bank_account_number", "Nomor rekening pemasok"),
+                                ("supplier_bank_account_name", "Nama pemilik rekening"),
+                                ("currency", "Mata uang"),
+                                ("subtotal", "Subtotal"),
+                                ("tax_rate", "Tarif pajak yang tercantum"),
+                                ("tax_amount", "Nominal pajak yang tercantum"),
+                                ("total_amount", "Total invoice")
+                            ] %}
+
+                            <div class="invoice-details">
+                                {% for field, label in invoice_fields %}
+                                    <div class="invoice-field">
+                                        <label for="{{ field }}">{{ label }}</label>
+                                        <input
+                                            class="review-input"
+                                            id="{{ field }}"
+                                            name="{{ field }}"
+                                            value="{{ invoice_data.get(field) if invoice_data.get(field) is not none else '' }}"
+                                            {% if result.get("status") == "APPROVED" %}readonly{% else %}readonly{% endif %}
+                                        >
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            <section class="invoice-subsection">
+                                <div class="subsection-heading">
+                                    <h3>Rincian item</h3>
+                                    {% if result.get("status") != "APPROVED" %}
+                                        <button class="small-button" id="addLineItemButton" type="button" hidden>+ Tambah item</button>
+                                    {% endif %}
+                                </div>
+
+                                <div class="table-wrap">
+                                    <table class="line-items-table">
+                                        <thead>
+                                            <tr>
+                                                <th>No.</th>
+                                                <th>Deskripsi</th>
+                                                <th class="number">Jumlah</th>
+                                                <th class="number">Harga satuan</th>
+                                                <th class="number">Total</th>
+                                                {% if result.get("status") != "APPROVED" %}
+                                                    <th class="item-action">Aksi</th>
+                                                {% endif %}
+                                            </tr>
+                                        </thead>
+                                        <tbody id="lineItemsBody">
+                                            {% for item in invoice_data.get("line_items", []) %}
+                                                <tr>
+                                                    <td>{{ item.get("line_number") or loop.index }}</td>
+                                                    <td>
+                                                        <input class="review-input"
+                                                               name="line_items[{{ loop.index0 }}][description]"
+                                                               value="{{ item.get('description') or '' }}"
+                                                               readonly
+                                                               aria-label="Deskripsi item {{ loop.index }}">
+                                                    </td>
+                                                    <td class="number">
+                                                        <input class="review-input"
+                                                               name="line_items[{{ loop.index0 }}][quantity]"
+                                                               value="{{ item.get('quantity') if item.get('quantity') is not none else '' }}"
+                                                               readonly
+                                                               aria-label="Jumlah item {{ loop.index }}">
+                                                    </td>
+                                                    <td class="number">
+                                                        <input class="review-input"
+                                                               name="line_items[{{ loop.index0 }}][unit_price]"
+                                                               value="{{ item.get('unit_price') if item.get('unit_price') is not none else '' }}"
+                                                               readonly
+                                                               aria-label="Harga item {{ loop.index }}">
+                                                    </td>
+                                                    <td class="number">
+                                                        <input class="review-input"
+                                                               name="line_items[{{ loop.index0 }}][line_total]"
+                                                               value="{{ item.get('line_total') if item.get('line_total') is not none else '' }}"
+                                                               readonly
+                                                               aria-label="Total item {{ loop.index }}">
+                                                    </td>
+                                                    {% if result.get("status") != "APPROVED" %}
+                                                        <td class="item-action">
+                                                            <button class="small-button remove-item-button"
+                                                                    type="button"
+                                                                    hidden>Hapus</button>
+                                                        </td>
+                                                    {% endif %}
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </section>
+
+                            {% set review_validation = validation if validation is defined and validation else result.get("validation") %}
+                            {% if review_validation and review_validation.get("issues") %}
+                                <div class="validation-issues">
+                                    <strong>Hal yang perlu diperiksa</strong>
+                                    <ul>
+                                        {% for issue in review_validation.get("issues", []) %}
+                                            <li>{{ issue }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            {% endif %}
+
+                            <div class="review-actions">
+                                {% if result.get("status") == "APPROVED" %}
+                                    <span class="status-badge">Invoice disetujui</span>
+                                {% else %}
+                                    <button class="button button-secondary"
+                                            id="editInvoiceButton"
+                                            type="button">Edit</button>
+                                    <button class="button button-secondary"
+                                            id="saveInvoiceButton"
+                                            type="submit"
+                                            name="review_action"
+                                            value="save"
+                                            hidden>Simpan perubahan</button>
+                                    <button class="button button-primary"
+                                            type="submit"
+                                            name="review_action"
+                                            value="approve">Setujui invoice</button>
+                                {% endif %}
+                            </div>
+                        </form>
+
+                        {% if result.get("status") == "APPROVED" %}
+                            <div class="voucher-actions">
+                                <a class="button button-primary"
+                                   href="{{ url_for('upload.preview_voucher', document_id=result.get('document_id')) }}">
+                                    Lihat preview voucher
+                                </a>
+                            </div>
+                        {% endif %}
+                    </section>
+                {% endif %}
+            {% else %}
+                <section class="card document-card">
+                    <div class="document-info">
+                        <span class="document-icon" aria-hidden="true">▤</span>
+                        <div>
+                            <p class="document-name">{{ display_name }}</p>
+                            <p class="document-subtitle">Dokumen siap diproses</p>
+                            {% if upload_time is defined and upload_time is not none %}
+                                <span class="upload-time">
+                                    Waktu upload:
+                                    <strong>{{ "%.2f"|format(upload_time|float) }} detik</strong>
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if result.get("document_id") %}
+                        <form class="extract-form"
+                              method="POST"
+                              action="{{ url_for('upload.extract_document', document_id=result.get('document_id')) }}"
+                              data-loading-text="Mengekstrak...">
+                            <input type="hidden" name="csrf_token" value="{{ token }}">
+                            <button class="button button-primary" type="submit">Mulai ekstraksi</button>
+                        </form>
+                    {% endif %}
+                </section>
+            {% endif %}
+        {% endif %}
+    </main>
+
+    <script>
+        const documentInput = document.getElementById("documentInput");
+        const fileName = document.getElementById("fileName");
+
+        if (documentInput && fileName) {
+            documentInput.addEventListener("change", function () {
+                const file = documentInput.files[0];
+                fileName.textContent = file ? file.name : "Pilih dokumen untuk di-upload";
+            });
+        }
+
+        const editButton = document.getElementById("editInvoiceButton");
+        const saveButton = document.getElementById("saveInvoiceButton");
+        const reviewForm = document.getElementById("invoiceReviewForm");
+        const addItemButton = document.getElementById("addLineItemButton");
+        const itemsBody = document.getElementById("lineItemsBody");
+
+        function setReviewEditable(isEditable) {
+            if (!reviewForm) return;
+
+            reviewForm.querySelectorAll(".review-input").forEach(function (input) {
+                if (isEditable) {
+                    input.removeAttribute("readonly");
+                } else {
+                    input.setAttribute("readonly", "readonly");
+                }
+            });
+
+            if (addItemButton) addItemButton.hidden = !isEditable;
+
+            reviewForm.querySelectorAll(".remove-item-button").forEach(function (button) {
+                button.hidden = !isEditable;
+            });
+        }
+
+        if (editButton && saveButton && reviewForm) {
+            editButton.addEventListener("click", function () {
+                setReviewEditable(true);
+                editButton.hidden = true;
+                saveButton.hidden = false;
+            });
+        }
+
+        let nextItemIndex = itemsBody ? itemsBody.querySelectorAll("tr").length : 0;
+
+        function createItemInput(index, field, label) {
+            const input = document.createElement("input");
+            input.className = "review-input";
+            input.name = `line_items[${index}][${field}]`;
+            input.setAttribute("aria-label", label);
+            return input;
+        }
+
+        if (addItemButton && itemsBody) {
+            addItemButton.addEventListener("click", function () {
+                const index = nextItemIndex++;
+                const row = document.createElement("tr");
+                const numberCell = document.createElement("td");
+                numberCell.textContent = String(index + 1);
+                row.appendChild(numberCell);
+
+                const columns = [
+                    ["description", "Deskripsi item"],
+                    ["quantity", "Jumlah item"],
+                    ["unit_price", "Harga satuan item"],
+                    ["line_total", "Total item"]
+                ];
+
+                columns.forEach(function ([field, label]) {
+                    const cell = document.createElement("td");
+                    if (field !== "description") cell.className = "number";
+                    cell.appendChild(createItemInput(index, field, label));
+                    row.appendChild(cell);
+                });
+
+                const actionCell = document.createElement("td");
+                actionCell.className = "item-action";
+
+                const removeButton = document.createElement("button");
+                removeButton.className = "small-button remove-item-button";
+                removeButton.type = "button";
+                removeButton.textContent = "Hapus";
+                removeButton.addEventListener("click", function () {
+                    row.remove();
+                });
+
+                actionCell.appendChild(removeButton);
+                row.appendChild(actionCell);
+                itemsBody.appendChild(row);
+            });
+        }
+
+        if (itemsBody) {
+            itemsBody.querySelectorAll(".remove-item-button").forEach(function (button) {
+                button.addEventListener("click", function () {
+                    button.closest("tr").remove();
+                });
+            });
+        }
+
+        document.querySelectorAll("form[data-loading-text]").forEach(function (form) {
+            form.addEventListener("submit", function (event) {
+                if (form.dataset.submitting === "true") {
+                    event.preventDefault();
+                    return;
+                }
+
+                form.dataset.submitting = "true";
+                const submitter = event.submitter;
+                if (submitter) submitter.textContent = form.dataset.loadingText;
+
+                form.querySelectorAll('button[type="submit"]').forEach(function (button) {
+                    if (button !== submitter) button.disabled = true;
+                });
+            });
+        });
+    </script>
+</body>
+</html>
