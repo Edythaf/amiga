@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Preview Voucher | AMIGA</title>
+
+    <style>
+        :root {
+            --navy: #14243a;
+            --blue: #2563eb;
+            --text: #243247;
+            --muted: #718096;
+            --border: #e3e9f2;
+            --background: #f5f7fb;
+            --white: #ffffff;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: var(--background);
+            color: var(--text);
+            font-family: Inter, "Segoe UI", Arial, sans-serif;
+        }
+
+        .topbar {
+            min-height: 68px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 12px 32px;
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .brand {
+            color: var(--navy);
+            font-size: 17px;
+            font-weight: 750;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .button {
+            min-height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 16px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            background: var(--white);
+            color: var(--text);
+            font: inherit;
+            font-size: 13px;
+            font-weight: 650;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .button-primary {
+            border-color: var(--blue);
+            background: var(--blue);
+            color: var(--white);
+        }
+
+        main {
+            width: min(1200px, 100%);
+            margin: 0 auto;
+            padding: 28px 24px;
+        }
+
+        .heading { margin-bottom: 18px; }
+
+        .heading h1 {
+            margin: 0;
+            color: var(--navy);
+            font-size: 25px;
+        }
+
+        .heading p {
+            margin: 7px 0 0;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .preview {
+            height: min(78vh, 1000px);
+            min-height: 520px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--white);
+            box-shadow: 0 8px 24px rgb(20 36 58 / 5%);
+        }
+
+        .preview iframe {
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
+        .notice {
+            margin: 14px 0 0;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 640px) {
+            .topbar {
+                align-items: flex-start;
+                flex-direction: column;
+                padding: 16px;
+            }
+
+            main { padding: 22px 14px; }
+
+            .preview {
+                height: 70vh;
+                min-height: 420px;
+            }
+
+            .actions { width: 100%; }
+            .actions .button { flex: 1; }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="topbar">
+        <div class="brand">AMIGA · Voucher</div>
+
+        <div class="actions">
+            <a class="button" href="{{ url_for('upload.upload_page') }}">
+                Kembali
+            </a>
+
+            <form
+                method="POST"
+                action="{{ url_for(
+                    'upload.generate_voucher',
+                    document_id=document_id
+                ) }}"
+            >
+                <input type="hidden" name="csrf_token" value="{{ token }}">
+                <button class="button button-primary" type="submit">
+                    Unduh PDF
+                </button>
+            </form>
+        </div>
+    </header>
+
+    <main>
+        <section class="heading">
+            <h1>Preview voucher</h1>
+            <p>Periksa voucher sebelum mengunduh PDF.</p>
+        </section>
+
+        <section class="preview" aria-label="Preview PDF voucher">
+            <iframe
+                src="{{ url_for(
+                    'upload.voucher_preview_pdf',
+                    document_id=document_id
+                ) }}"
+                title="Preview PDF {{ voucher_filename }}"
+            ></iframe>
+        </section>
+
+        <p class="notice">
+            Voucher ini bukan bukti bahwa pembayaran telah dilakukan.
+        </p>
+    </main>
+</body>
+</html>
