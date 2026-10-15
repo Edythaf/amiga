@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Preview Voucher | AMIGA</title>
-
     <style>
         :root {
             --navy: #14243a;
@@ -13,7 +12,7 @@
             --muted: #718096;
             --border: #e3e9f2;
             --background: #f5f7fb;
-            --white: #ffffff;
+            --white: #fff;
         }
 
         * { box-sizing: border-box; }
@@ -130,31 +129,25 @@
             }
 
             .actions { width: 100%; }
+
             .actions .button { flex: 1; }
         }
     </style>
 </head>
-
 <body>
     <header class="topbar">
         <div class="brand">AMIGA · Voucher</div>
 
         <div class="actions">
-            <a class="button" href="{{ url_for('upload.upload_page') }}">
-                Kembali
+            <a class="button" href="{{ url_for('upload.queue_page') }}">
+                Kembali ke antrean
             </a>
 
-            <form
-                method="POST"
-                action="{{ url_for(
-                    'upload.generate_voucher',
-                    document_id=document_id
-                ) }}"
-            >
+            <form method="POST"
+                  action="{{ url_for('upload.generate_voucher', document_id=document_id) }}">
                 <input type="hidden" name="csrf_token" value="{{ token }}">
-                <button class="button button-primary" type="submit">
-                    Unduh PDF
-                </button>
+                <input type="hidden" name="invoice_index" value="{{ invoice_index or 0 }}">
+                <button class="button button-primary" type="submit">Unduh PDF</button>
             </form>
         </div>
     </header>
@@ -167,17 +160,12 @@
 
         <section class="preview" aria-label="Preview PDF voucher">
             <iframe
-                src="{{ url_for(
-                    'upload.voucher_preview_pdf',
-                    document_id=document_id
-                ) }}"
-                title="Preview PDF {{ voucher_filename }}"
-            ></iframe>
+                src="{{ url_for('upload.voucher_preview_pdf', document_id=document_id, invoice=invoice_index or 0) }}"
+                title="Preview PDF {{ voucher_filename }}">
+            </iframe>
         </section>
 
-        <p class="notice">
-            Voucher ini bukan bukti bahwa pembayaran telah dilakukan.
-        </p>
+        <p class="notice">Voucher ini bukan bukti bahwa pembayaran telah dilakukan.</p>
     </main>
 </body>
 </html>

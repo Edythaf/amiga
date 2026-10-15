@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AMIGA | Kelola Akun dan Perusahaan</title>
+    <style>
+        :root{--navy:#172b4d;--blue:#2563eb;--text:#1f2937;--muted:#718096;--line:#e5eaf2;--surface:#fff;--bg:#f4f7fb;--green:#16805d;--red:#b42318}
+        *{box-sizing:border-box}
+        body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+        a{color:inherit;text-decoration:none}
+        .topbar{min-height:72px;padding:0 6%;display:flex;align-items:center;justify-content:space-between;background:#fff;border-bottom:1px solid var(--line)}
+        .brand{font-size:20px;font-weight:800;color:var(--navy)}
+        .top-links{display:flex;align-items:center;gap:14px}
+        .top-links a{color:var(--blue);font-weight:650}
+        main{width:min(1180px,90%);margin:34px auto 64px}
+        .heading{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:24px}
+        h1,h2,h3,p{margin-top:0}
+        h1{margin-bottom:6px;color:var(--navy);font-size:30px}
+        .sub{color:var(--muted);margin:0}
+        .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-bottom:18px}
+        .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:0 8px 24px rgba(23,43,77,.04)}
+        .card h2{font-size:17px;color:var(--navy);margin-bottom:5px}
+        .card .hint{font-size:12px;color:var(--muted);margin-bottom:18px}
+        label{display:block;font-weight:650;font-size:12px;color:#475569;margin:12px 0 5px}
+        input,select{width:100%;padding:10px 11px;border:1px solid #cfd7e3;border-radius:8px;font:inherit;background:#fff}
+        input:focus,select:focus{outline:3px solid #dbeafe;border-color:var(--blue)}
+        button,.button{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;margin-top:14px;border:0;border-radius:8px;background:var(--blue);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+        .button.secondary{margin:0;background:#eff4ff;color:var(--blue)}
+        .table-wrap{overflow:auto}
+        table{width:100%;border-collapse:collapse;min-width:650px}
+        th,td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+        th{background:#f8fafc;color:#475569;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+        td{font-size:13px}
+        tr:last-child td{border-bottom:0}
+        .status{font-weight:700;color:var(--green)}
+        .inactive{font-weight:700;color:var(--red)}
+        .flash{padding:11px 14px;margin:0 0 14px;border-radius:9px;background:#e8f6f0;color:#126044}
+        .flash.error{background:#fff0ee;color:#9d271d}
+        .section{margin:20px 0}
+        .empty{padding:18px;color:var(--muted);text-align:center}
+        .access-help{margin:0 0 14px;color:var(--muted);font-size:12px}
+        .safety{padding:13px 16px;border:1px solid #dbeafe;border-radius:10px;color:#334155;background:#eff6ff;font-size:13px}
+        @media(max-width:760px){
+            main{width:92%;margin-top:24px}
+            .grid{grid-template-columns:1fr}
+            .heading{align-items:flex-start;flex-direction:column}
+            .topbar{padding:0 4%}
+            .top-links{gap:8px;font-size:12px}
+        }
+    </style>
+</head>
+<body>
+<header class="topbar">
+    <a class="brand" href="{{ url_for('auth.admin_dashboard') }}">AMIGA · System Admin</a>
+    <nav class="top-links" aria-label="Navigasi admin">
+        <a href="{{ url_for('auth.admin_dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('admin.audit_log') }}">Audit log</a>
+        <form action="{{ url_for('auth.logout') }}" method="post">
+            <button class="button secondary" type="submit">Keluar</button>
+        </form>
+    </nav>
+</header>
+
+<main>
+    <div class="heading">
+        <div>
+            <h1>Kelola akun dan perusahaan</h1>
+            <p class="sub">Buat akun operasional, daftarkan perusahaan, dan atur aksesnya.</p>
+        </div>
+        <a class="button secondary" href="{{ url_for('upload.queue_page') }}">Kembali ke antrean</a>
+    </div>
+
+    {% for category, message in get_flashed_messages(with_categories=true) %}
+        <div class="flash {{ 'error' if category == 'error' else '' }}" role="status">
+            {{ message }}
+        </div>
+    {% endfor %}
+
+    <div class="grid">
+        <section class="card" aria-labelledby="new-user-title">
+            <h2 id="new-user-title">Buat akun</h2>
+            <p class="hint">Buat akun Intake Support atau Finance Reviewer.</p>
+
+            <form method="post" action="{{ url_for('admin.manage') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="action" value="create_user">
+
+                <label for="full_name">Nama lengkap</label>
+                <input id="full_name" name="full_name" maxlength="150" required>
+
+                <label for="email">Email login</label>
+                <input id="email" name="email" type="email" maxlength="255" required>
+
+                <label for="role_code">Role</label>
+                <select id="role_code" name="role_code" required>
+                    <option value="">Pilih role</option>
+                    {% for role in role_options %}
+                        <option value="{{ role.role_code }}">
+                            {{ role.role_name }} ({{ role.role_code }})
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <label for="password">Password awal (minimal 12 karakter)</label>
+                <input id="password" name="password" type="password"
+                       minlength="12" autocomplete="new-password" required>
+
+                <button type="submit">Buat akun</button>
+            </form>
+        </section>
+
+        <section class="card" aria-labelledby="new-company-title">
+            <h2 id="new-company-title">Daftarkan perusahaan</h2>
+            <p class="hint">Kode perusahaan harus unik.</p>
+
+            <form method="post" action="{{ url_for('admin.manage') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="action" value="create_company">
+
+                <label for="company_code">Kode perusahaan</label>
+                <input id="company_code" name="company_code" maxlength="40" required>
+
+                <label for="company_name">Nama perusahaan</label>
+                <input id="company_name" name="company_name" maxlength="200" required>
+
+                <button type="submit">Daftarkan perusahaan</button>
+            </form>
+        </section>
+    </div>
+
+    <section class="card section" aria-labelledby="grant-access-title">
+        <h2 id="grant-access-title">Atur akses perusahaan</h2>
+        <p class="hint">Pilih akun aktif dan perusahaan aktif untuk memberikan akses.</p>
+        <p class="access-help">
+            Akses ini menentukan perusahaan yang dapat dipilih Intake Support saat upload
+            dan perusahaan yang dapat dilihat Finance Reviewer pada antrean.
+        </p>
+
+        {% set access_users = namespace(items=[]) %}
+        {% for user in users %}
+            {% if user.is_active and ('INTAKE_SUPPORT' in user.role_codes or 'FINANCE_REVIEWER' in user.role_codes) %}
+                {% set access_users.items = access_users.items + [user] %}
+            {% endif %}
+        {% endfor %}
+
+        {% if access_users.items and companies %}
+            <form class="grid" method="post" action="{{ url_for('admin.manage') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="action" value="grant_company_access">
+
+                <div>
+                    <label for="access_user">Akun</label>
+                    <select id="access_user" name="user_id" required>
+                        <option value="">Pilih akun</option>
+                        {% for user in access_users.items %}
+                            <option value="{{ user.user_id }}">
+                                {{ user.full_name }} · {{ user.email }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label for="access_company">Perusahaan</label>
+                    <select id="access_company" name="company_id" required>
+                        <option value="">Pilih perusahaan</option>
+                        {% for company in companies if company.is_active %}
+                            <option value="{{ company.company_id }}">
+                                {{ company.company_name }} ({{ company.company_code }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit">Berikan akses</button>
+                </div>
+            </form>
+        {% else %}
+            <p class="empty">
+                Pastikan ada akun Intake Support atau Finance Reviewer yang aktif
+                dan setidaknya satu perusahaan aktif sebelum mengatur akses.
+            </p>
+        {% endif %}
+    </section>
+
+    <section class="card section" aria-labelledby="users-title">
+        <h2 id="users-title">Akun terdaftar</h2>
+        <p class="hint">Password tidak ditampilkan dan tidak dicatat dalam audit log.</p>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>Nama</th><th>Email</th><th>Role</th><th>Status</th><th>Dibuat</th></tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                        <tr>
+                            <td>{{ user.full_name }}</td>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.role_codes }}</td>
+                            <td class="{{ 'status' if user.is_active else 'inactive' }}">
+                                {{ 'Aktif' if user.is_active else 'Nonaktif' }}
+                            </td>
+                            <td>{{ user.created_at }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="5" class="empty">Belum ada akun.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="card section" aria-labelledby="companies-title">
+        <h2 id="companies-title">Perusahaan terdaftar</h2>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>Kode</th><th>Nama perusahaan</th><th>Status</th><th>Didaftarkan</th></tr>
+                </thead>
+                <tbody>
+                    {% for company in companies %}
+                        <tr>
+                            <td>{{ company.company_code }}</td>
+                            <td>{{ company.company_name }}</td>
+                            <td class="{{ 'status' if company.is_active else 'inactive' }}">
+                                {{ 'Aktif' if company.is_active else 'Nonaktif' }}
+                            </td>
+                            <td>{{ company.created_at }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="4" class="empty">Belum ada perusahaan.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="card section" aria-labelledby="access-title">
+        <h2 id="access-title">Akses perusahaan</h2>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>Akun</th><th>Email</th><th>Perusahaan</th><th>Diberikan</th></tr>
+                </thead>
+                <tbody>
+                    {% for access in access_rows %}
+                        <tr>
+                            <td>{{ access.full_name }}</td>
+                            <td>{{ access.email }}</td>
+                            <td>{{ access.company_name }}</td>
+                            <td>{{ access.granted_at }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="4" class="empty">Belum ada akses perusahaan yang diberikan.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <p class="safety">
+        <strong>Batas akses:</strong> System Admin dapat mengelola akun dan perusahaan
+        serta memantau dokumen. Fitur unggah hanya untuk Intake Support; persetujuan
+        transaksi hanya untuk Finance Reviewer.
+    </p>
+</main>
+</body>
+</html>

@@ -4,261 +4,377 @@ import secrets
 import time
 from pathlib import Path
 
+import psycopg
+from werkzeug.exceptions import HTTPException
 from flask import (
-    Blueprint,
-    abort,
-    current_app,
-    redirect,
-    render_template,
-    request,
-    send_file,
-    session,
-    url_for,
+          Blueprint,
+          abort,
+          current_app,
+          redirect,
+          render_template,
+          request,
+          send_file,
+          session,
+          url_for,
 )
-
 from backend.voucher_service import generate_voucher_pdf
-
 from .queue_store import (
-    enqueue_document,
-    list_queue_items,
-    load_invoice_records,
-    mark_invoice_previewed,
-    mark_previewed,
-    save_invoice_records,
-    update_queue_item,
+          list_accessible_companies,
+          user_can_access_company,
+          enqueue_document,
+          list_queue_items,
+          load_invoice_records,
+          mark_invoice_previewed,
+          mark_previewed,
+          save_invoice_records,
+          update_queue_item,
 )
 from .service import (
-    OcrError,
-    UploadError,
-    extract_document_with_bedrock,
-    extract_invoice_data_with_bedrock,
-    extract_pdf_text,
-    save_document,
-    validate_invoice_data,
+          OcrError,
+          UploadError,
+          extract_document_with_bedrock,
+          extract_invoice_data_with_bedrock,
+          extract_pdf_text,
+          save_document,
+          validate_invoice_data,
 )
-
-
 upload_bp = Blueprint("upload", __name__)
-
 DOCUMENT_ID_PATTERN = re.compile(r"^[a-f0-9]{32}$")
 LINE_ITEM_PATTERN = re.compile(
     r"^line_items\[(\d+)\]\[(description|quantity|unit_price|line_total)\]$"
 )
-
 EDITABLE_INVOICE_FIELDS = (
-    "invoice_number",
-    "invoice_date",
-    "due_date",
-    "purchase_order_number",
-    "supplier_name",
-    "supplier_address",
-    "customer_name",
-    "customer_address",
-    "purpose",
-    "service_period",
-    "payment_method",
-    "supplier_bank_name",
-    "supplier_bank_account_number",
-    "supplier_bank_account_name",
-    "currency",
-    "subtotal",
-    "tax_rate",
-    "tax_amount",
-    "total_amount",
+          "invoice_number",
+          "invoice_date",
+          "due_date",
+          "purchase_order_number",
+          "supplier_name",
+          "supplier_address",
+          "customer_name",
+          "customer_address",
+          "purpose",
+          "service_period",
+          "payment_method",
+          "supplier_bank_name",
+          "supplier_bank_account_number",
+          "supplier_bank_account_name",
+          "currency",
+          "subtotal",
+          "tax_rate",
+          "tax_amount",
+          "total_amount",
 )
 
-
-def get_upload_token():
-    if "upload_token" not in session:
-        session["upload_token"] = secrets.token_hex(32)
-    return session["upload_token"]
-
-
-def is_valid_csrf_token(token):
-    submitted_token = request.form.get("csrf_token", "")
-    return secrets.compare_digest(token, submitted_token)
-
-
-def render_upload_error(
-    token,
-    message,
-    status_code,
-    result=None,
-    invoice_data=None,
-    extracted_text="",
-):
-    response = render_template(
-        "upload.html",
-        token=token,
-        result=result,
-        invoice_data=invoice_data,
-        extracted_text=extracted_text,
-        error=message,
-        upload_time=session.get("upload_time"),
+def _accessible_companies():
+    user_id = session.get("user_id")
+    if user_id is None:
+        return []
+    return list_accessible_companies(
+        current_app.config["DATABASE_URL"],
+        user_id,
     )
-    return response, status_code
 
 
-def get_document_paths(document_id):
+def _queue_companies():
+    """Return companies an administrator may monitor or a reviewer may access."""
+    if "SYSTEM_ADMIN" in set(session.get("roles", [])):
+        with psycopg.connect(current_app.config["DATABASE_URL"]) as connection:
+            rows = connection.execute(
+                """
+                SELECT company_id, company_code, company_name
+                FROM companies
+                WHERE is_active = TRUE
+                ORDER BY company_name
+                """
+            ).fetchall()
+
+        return [
+            {
+                "company_id": row[0],
+                "company_code": row[1],
+                "company_name": row[2],
+            }
+            for row in rows
+        ]
+
+    return _accessible_companies()
+
+
+def _load_document_access(document_id):
     if not DOCUMENT_ID_PATTERN.fullmatch(document_id):
         abort(400)
 
-    document_dir = Path(current_app.config["UPLOAD_DIR"]) / document_id
+    with psycopg.connect(current_app.config["DATABASE_URL"]) as connection:
+        row = connection.execute(
+            """
+            SELECT company_id, uploaded_by_user_id
+            FROM queue_items
+            WHERE document_id = %s
+            """,
+            (document_id,),
+        ).fetchone()
+
+    if row is None:
+        abort(404)
+
     return {
-        "directory": document_dir,
-        "metadata": document_dir / "metadata.json",
-        "extracted": document_dir / "extracted.txt",
-        "invoice_data": document_dir / "invoice_data.json",
+        "company_id": row[0],
+        "uploaded_by_user_id": row[1],
     }
 
 
-def get_original_document_url(document_id):
-    return url_for(
-        "upload.original_document",
-        document_id=document_id,
-    )
+def _require_document_company_access(document_id):
+    document = _load_document_access(document_id)
+    user_id = session.get("user_id")
 
+    if "SYSTEM_ADMIN" in set(session.get("roles", [])):
+        return document
 
-def normalize_invoice_records(value, metadata=None):
-    """Mendukung format multi-invoice dan format invoice lama."""
-    if isinstance(value, list):
-        source_records = value
-    elif isinstance(value, dict) and isinstance(value.get("invoices"), list):
-        source_records = value["invoices"]
-    elif isinstance(value, dict):
-        source_records = [value]
-    else:
-        return []
+    if user_id is None or document["company_id"] is None:
+        abort(403)
 
-    records = []
-    for item in source_records:
-        if not isinstance(item, dict):
-            continue
-
-        if isinstance(item.get("data"), dict):
-            records.append(
-                {
-                    "data": item["data"],
-                    "validation": item.get(
-                        "validation",
-                        {"valid": False, "issues": []},
-                    ),
-                    "status": item.get("status", "READY_FOR_REVIEW"),
-                    "previewed": bool(item.get("previewed", False)),
-                }
-            )
-        else:
-            records.append(
-                {
-                    "data": item,
-                    "validation": (metadata or {}).get(
-                        "validation",
-                        {"valid": False, "issues": []},
-                    ),
-                    "status": (metadata or {}).get(
-                        "status",
-                        "READY_FOR_REVIEW",
-                    ),
-                    "previewed": False,
-                }
-            )
-
-    return records
-
-
-def load_records_for_document(paths, metadata):
-    """Ambil invoice dari PostgreSQL; gunakan JSON untuk data lama."""
-    database_url = current_app.config["DATABASE_URL"]
-    records = load_invoice_records(database_url, paths["directory"].name)
-
-    if records:
-        return normalize_invoice_records(records, metadata)
-
-    if not paths["invoice_data"].is_file():
-        return []
-
-    stored_data = json.loads(
-        paths["invoice_data"].read_text(encoding="utf-8")
-    )
-    records = normalize_invoice_records(stored_data, metadata)
-
-    # Pindahkan data lama dari JSON ke PostgreSQL saat pertama dibuka.
-    if records:
-        save_invoice_records(database_url, paths["directory"].name, records)
-
-    return records
-
-
-def save_records_for_document(paths, document_id, records):
-    """Simpan ke PostgreSQL dan perbarui salinan JSON."""
-    save_invoice_records(
+    if not user_can_access_company(
         current_app.config["DATABASE_URL"],
-        document_id,
-        records,
-    )
-    paths["invoice_data"].write_text(
-        json.dumps({"invoices": records}, indent=2, ensure_ascii=False),
-        encoding="utf-8",
-    )
+        user_id,
+        document["company_id"],
+    ):
+        abort(403)
+
+    return document
 
 
-def render_review_page(
-    token,
-    metadata,
-    invoice_data=None,
-    extracted_text="",
-    error=None,
-    status_code=200,
-    invoice_records=None,
-    invoice_index=0,
-    validation=None,
+def _require_review_access(document_id):
+    roles = set(session.get("roles", []))
+    if "FINANCE_REVIEWER" not in roles or "SYSTEM_ADMIN" in roles:
+        abort(403)
+
+    document = _require_document_company_access(document_id)
+    if document["uploaded_by_user_id"] == session.get("user_id"):
+        abort(403)
+
+    return document
+
+
+def _require_voucher_access(document_id):
+    roles = set(session.get("roles", []))
+    if "SYSTEM_ADMIN" in roles:
+        abort(403)
+    if not roles.intersection({"FINANCE_REVIEWER", "PIC_CLIENT"}):
+        abort(403)
+
+    document = _require_document_company_access(document_id)
+    if (
+        "FINANCE_REVIEWER" in roles
+        and document["uploaded_by_user_id"] == session.get("user_id")
+    ):
+        abort(403)
+
+    return document
+
+
+def _write_upload_audit(action, entity_type, entity_id, old_value=None, new_value=None):
+    old_json = json.dumps(old_value, ensure_ascii=False) if old_value is not None else None
+    new_json = json.dumps(new_value, ensure_ascii=False) if new_value is not None else None
+
+    with psycopg.connect(current_app.config["DATABASE_URL"]) as connection:
+        connection.execute(
+            """
+            INSERT INTO audit_logs (
+                actor_user_id,
+                action,
+                entity_type,
+                entity_id,
+                old_value,
+                new_value,
+                created_at
+            )
+            VALUES (%s, %s, %s, %s, %s::jsonb, %s::jsonb, NOW())
+            """,
+            (
+                session.get("user_id"),
+                action,
+                entity_type,
+                str(entity_id),
+                old_json,
+                new_json,
+            ),
+        )
+
+
+def get_upload_token():
+          if "upload_token" not in session:
+                    session["upload_token"] = secrets.token_hex(32)
+          return session["upload_token"]
+def is_valid_csrf_token(token):
+          submitted_token = request.form.get("csrf_token", "")
+          return secrets.compare_digest(token, submitted_token)
+def render_upload_error(
+          token,
+          message,
+          status_code,
+          result=None,
+          invoice_data=None,
+          extracted_text="",
 ):
-    timing = metadata.get("timing", {}) if isinstance(metadata, dict) else {}
-    invoice_records = invoice_records or []
-    invoice_index = min(
-        max(invoice_index, 0),
-        max(len(invoice_records) - 1, 0),
-    )
-    selected_record = invoice_records[invoice_index] if invoice_records else {}
+          response = render_template(
+                    "upload.html",
+                    token=token,
+                    result=result,
+                    companies=_accessible_companies(),
+                    invoice_data=invoice_data,
+                    extracted_text=extracted_text,
+                    error=message,
+                    upload_time=session.get("upload_time"),
+          )
+          return response, status_code
+def get_document_paths(document_id):
+          if not DOCUMENT_ID_PATTERN.fullmatch(document_id):
+                    abort(400)
+          document_dir = Path(current_app.config["UPLOAD_DIR"]) / document_id
+          return {
+                    "directory": document_dir,
+                    "metadata": document_dir / "metadata.json",
+                    "extracted": document_dir / "extracted.txt",
+                    "invoice_data": document_dir / "invoice_data.json",
+          }
+def get_original_document_url(document_id):
+          return url_for(
+                    "upload.original_document",
+                    document_id=document_id,
+          )
+def normalize_invoice_records(value, metadata=None):
+          """Mendukung format multi-invoice dan format invoice lama."""
+          if isinstance(value, list):
+                    source_records = value
+          elif isinstance(value, dict) and isinstance(value.get("invoices"), list):
+                    source_records = value["invoices"]
+          elif isinstance(value, dict):
+                    source_records = [value]
+          else:
+                    return []
+          records = []
+          for item in source_records:
+                    if not isinstance(item, dict):
+                              continue
+                    if isinstance(item.get("data"), dict):
+                              records.append(
+                                        {
+                                                  "data": item["data"],
+                                                  "validation": item.get(
+                                                            "validation",
+                                                            {"valid": False, "issues": []},
+                                                  ),
+                                                  "status": item.get("status", "READY_FOR_REVIEW"),
+                                                  "previewed": bool(item.get("previewed", False)),
+                                        }
+                              )
+                    else:
+                              records.append(
+                                        {
+                                                  "data": item,
+                                                  "validation": (metadata or {}).get(
+                                                            "validation",
+                                                            {"valid": False, "issues": []},
+                                                  ),
+                                                  "status": (metadata or {}).get(
+                                                            "status",
+                                                            "READY_FOR_REVIEW",
+                                                  ),
+                                                  "previewed": False,
+                                        }
+                              )
+          return records
+def load_records_for_document(paths, metadata):
+          """Ambil invoice dari PostgreSQL; gunakan JSON untuk data lama."""
+          database_url = current_app.config["DATABASE_URL"]
+          records = load_invoice_records(database_url, paths["directory"].name)
+          if records:
+                    return normalize_invoice_records(records, metadata)
+          if not paths["invoice_data"].is_file():
+                    return []
+          stored_data = json.loads(
+                    paths["invoice_data"].read_text(encoding="utf-8")
+          )
+          records = normalize_invoice_records(stored_data, metadata)
+          # Pindahkan data lama dari JSON ke PostgreSQL saat pertama dibuka.
+          if records:
+                    save_invoice_records(database_url, paths["directory"].name, records)
+          return records
+def save_records_for_document(paths, document_id, records):
+          """Simpan ke PostgreSQL dan perbarui salinan JSON."""
+          save_invoice_records(
+                    current_app.config["DATABASE_URL"],
+                    document_id,
+                    records,
+          )
+          paths["invoice_data"].write_text(
+                    json.dumps({"invoices": records}, indent=2, ensure_ascii=False),
+                    encoding="utf-8",
+          )
+def render_review_page(
+          token,
+          metadata,
+          invoice_data=None,
+          extracted_text="",
+          error=None,
+          status_code=200,
+          invoice_records=None,
+          invoice_index=0,
+          validation=None,
+):
+          timing = metadata.get("timing", {}) if isinstance(metadata, dict) else {}
+          invoice_records = invoice_records or []
+          invoice_index = min(
+                    max(invoice_index, 0),
+                    max(len(invoice_records) - 1, 0),
+          )
+          selected_record = invoice_records[invoice_index] if invoice_records else {}
+          response = render_template(
+                    "upload.html",
+                    token=token,
+                    result=metadata,
+                    invoice_data=invoice_data,
+                    invoice_records=invoice_records,
+                    invoice_index=invoice_index,
+                    invoice_status=selected_record.get(
+                              "status",
+                              metadata.get("status") if metadata else "",
+                    ),
+                    extracted_text=extracted_text,
+                    original_file_url=(
+                              get_original_document_url(metadata["document_id"])
+                              if metadata and metadata.get("document_id")
+                              else None
+                    ),
+                    upload_time=timing.get(
+                              "upload_time_seconds",
+                              session.get("upload_time"),
+                    ),
+                    extraction_time=timing.get("extraction_time_seconds"),
+                    invoice_time=timing.get("invoice_time_seconds"),
+                    processing_time=timing.get("processing_time_seconds"),
+                    validation=validation or (
+                              metadata.get("validation") if metadata else None
+                    ),
+                    error=error,
+          )
+          if status_code == 200:
+                    return response
+          return response, status_code
 
-    response = render_template(
-        "upload.html",
-        token=token,
-        result=metadata,
-        invoice_data=invoice_data,
-        invoice_records=invoice_records,
-        invoice_index=invoice_index,
-        invoice_status=selected_record.get(
-            "status",
-            metadata.get("status") if metadata else "",
-        ),
-        extracted_text=extracted_text,
-        original_file_url=(
-            get_original_document_url(metadata["document_id"])
-            if metadata and metadata.get("document_id")
-            else None
-        ),
-        upload_time=timing.get(
-            "upload_time_seconds",
-            session.get("upload_time"),
-        ),
-        extraction_time=timing.get("extraction_time_seconds"),
-        invoice_time=timing.get("invoice_time_seconds"),
-        processing_time=timing.get("processing_time_seconds"),
-        validation=validation or (
-            metadata.get("validation") if metadata else None
-        ),
-        error=error,
-    )
-
-    if status_code == 200:
-        return response
-    return response, status_code
-
-
+@upload_bp.route("/upload", methods=["GET", "POST"])
 @upload_bp.route("/", methods=["GET", "POST"])
 def upload_page():
+    roles = set(session.get("roles", []))
+    if "INTAKE_SUPPORT" not in roles or "SYSTEM_ADMIN" in roles:
+        abort(403)
+
+    user_id = session.get("user_id")
+    if user_id is None:
+        abort(403)
+
     token = get_upload_token()
+    companies = _accessible_companies()
 
     if request.method == "GET":
         result = session.pop("upload_result", None)
@@ -272,6 +388,7 @@ def upload_page():
             token=token,
             result=result,
             upload_time=upload_time,
+            companies=companies,
         )
 
     if not is_valid_csrf_token(token):
@@ -281,8 +398,19 @@ def upload_page():
             400,
         )
 
-    upload_started = time.perf_counter()
+    company_id = request.form.get("company_id", type=int)
+    selected_company = next(
+        (company for company in companies if company["company_id"] == company_id),
+        None,
+    )
+    if selected_company is None:
+        return render_upload_error(
+            token,
+            "Pilih perusahaan aktif yang aksesnya sudah diberikan admin.",
+            400,
+        )
 
+    upload_started = time.perf_counter()
     try:
         result = save_document(
             file=request.files.get("document"),
@@ -291,9 +419,10 @@ def upload_page():
             aws_region=current_app.config["AWS_REGION"],
             s3_prefix=current_app.config.get("S3_PREFIX", ""),
         )
-
         upload_time = round(time.perf_counter() - upload_started, 2)
         result["timing"] = {"upload_time_seconds": upload_time}
+        result["company_id"] = company_id
+        result["client_name"] = selected_company["company_name"]
 
         metadata_path = (
             Path(current_app.config["UPLOAD_DIR"])
@@ -303,15 +432,30 @@ def upload_page():
         result["queue_number"] = enqueue_document(
             current_app.config["DATABASE_URL"],
             result["document_id"],
+            uploaded_by_user_id=user_id,
+            company_id=company_id,
         )
         metadata_path.write_text(
             json.dumps(result, indent=2, ensure_ascii=False),
             encoding="utf-8",
         )
 
+        _write_upload_audit(
+            "DOCUMENT_UPLOADED",
+            "DOCUMENT",
+            result["document_id"],
+            new_value={
+                "company_id": company_id,
+                "company_name": selected_company["company_name"],
+                "original_filename": result.get("original_filename"),
+                "queue_number": result["queue_number"],
+            },
+        )
         session["upload_time"] = upload_time
         return redirect(url_for("upload.queue_page"), code=303)
 
+    except PermissionError as error:
+        return render_upload_error(token, str(error), 403)
     except UploadError as error:
         return render_upload_error(token, str(error), 400)
     except OSError:
@@ -322,24 +466,76 @@ def upload_page():
             500,
         )
 
-
 @upload_bp.route("/queue", methods=["GET"])
 def queue_page():
+    roles = set(session.get("roles", []))
+    allowed_roles = {"SYSTEM_ADMIN", "INTAKE_SUPPORT", "FINANCE_REVIEWER"}
+    if not roles.intersection(allowed_roles):
+        abort(403)
+
+    companies = _queue_companies()
+    selected_company_id = request.args.get("company_id", type=int)
+
     return render_template(
         "queue.html",
         token=get_upload_token(),
         queue_items=_queue_rows(include_metadata=True),
+        companies=companies,
+        selected_company_id=selected_company_id,
     )
 
 
 @upload_bp.route("/queue/data", methods=["GET"])
 def queue_data():
+    roles = set(session.get("roles", []))
+    allowed_roles = {"SYSTEM_ADMIN", "INTAKE_SUPPORT", "FINANCE_REVIEWER"}
+    if not roles.intersection(allowed_roles):
+        abort(403)
+
     return {"items": _queue_rows(include_metadata=True)}
 
 
 def _queue_rows(include_metadata=False):
     database_url = current_app.config["DATABASE_URL"]
-    rows = list_queue_items(database_url)
+    roles = set(session.get("roles", []))
+    user_id = session.get("user_id")
+
+    if "SYSTEM_ADMIN" in roles:
+        selected_id = request.args.get("company_id", type=int)
+
+        if selected_id is not None:
+            allowed_ids = {
+                company["company_id"] for company in _queue_companies()
+            }
+            if selected_id not in allowed_ids:
+                abort(403)
+            rows = list_queue_items(database_url, company_ids=[selected_id])
+        else:
+            rows = list_queue_items(database_url)
+
+    elif "FINANCE_REVIEWER" in roles and user_id is not None:
+        companies = _accessible_companies()
+        allowed_ids = {company["company_id"] for company in companies}
+        selected_id = request.args.get("company_id", type=int)
+
+        if selected_id is not None and selected_id not in allowed_ids:
+            abort(403)
+
+        company_ids = [selected_id] if selected_id is not None else list(allowed_ids)
+        rows = list_queue_items(database_url, company_ids=company_ids)
+
+    elif "INTAKE_SUPPORT" in roles and user_id is not None:
+        companies = _accessible_companies()
+        company_ids = [company["company_id"] for company in companies]
+        rows = list_queue_items(
+            database_url,
+            uploaded_by_user_id=user_id,
+            company_ids=company_ids,
+        )
+
+    else:
+        rows = []
+
     upload_dir = Path(current_app.config["UPLOAD_DIR"])
     output = []
 
@@ -351,16 +547,18 @@ def _queue_rows(include_metadata=False):
             metadata = {}
 
         row["original_filename"] = metadata.get("original_filename", "Dokumen")
-        row["client_name"] = metadata.get("client_name", "—")
+        row["client_name"] = (
+            row.get("company_name")
+            or metadata.get("client_name")
+            or "Belum dipetakan"
+        )
         row["review_available"] = bool(
             load_invoice_records(database_url, row["document_id"])
         ) or (
             upload_dir / row["document_id"] / "invoice_data.json"
         ).is_file()
         row["deadline"] = metadata.get("deadline", "—")
-        row["issue"] = row.get("error_message") or metadata.get(
-            "processing_error"
-        )
+        row["issue"] = row.get("error_message") or metadata.get("processing_error")
         row["review_url"] = url_for(
             "upload.review_invoice",
             document_id=row["document_id"],
@@ -368,562 +566,542 @@ def _queue_rows(include_metadata=False):
         output.append(row)
 
     return output
-
-
 @upload_bp.route("/<document_id>/original", methods=["GET"])
 def original_document(document_id):
-    paths = get_document_paths(document_id)
-
-    if not paths["metadata"].is_file():
-        abort(404)
-
-    try:
-        metadata = json.loads(paths["metadata"].read_text(encoding="utf-8"))
-        if not isinstance(metadata, dict):
-            abort(404)
-
-        stored_filename = metadata.get("stored_filename")
-        if (
-            not stored_filename
-            or stored_filename != Path(stored_filename).name
-        ):
-            abort(404)
-
-        document_path = paths["directory"] / stored_filename
-        if not document_path.is_file():
-            abort(404)
-
-        return send_file(
-            document_path,
-            as_attachment=False,
-            download_name=metadata.get("original_filename", stored_filename),
-        )
-    except (OSError, json.JSONDecodeError, TypeError):
-        current_app.logger.exception("Dokumen asli gagal dibaca")
-        abort(500)
-
-
+          roles = set(session.get("roles", []))
+          if not roles.intersection({"SYSTEM_ADMIN", "INTAKE_SUPPORT", "FINANCE_REVIEWER", "PIC_CLIENT"}):
+                    abort(403)
+          document = _require_document_company_access(document_id)
+          if "INTAKE_SUPPORT" in roles and document["uploaded_by_user_id"] != session.get("user_id"):
+                    abort(403)
+          if "FINANCE_REVIEWER" in roles and document["uploaded_by_user_id"] == session.get("user_id"):
+                    abort(403)
+          paths = get_document_paths(document_id)
+          if not paths["metadata"].is_file():
+                    abort(404)
+          try:
+                    metadata = json.loads(paths["metadata"].read_text(encoding="utf-8"))
+                    if not isinstance(metadata, dict):
+                              abort(404)
+                    stored_filename = metadata.get("stored_filename")
+                    if (
+                              not stored_filename
+                              or stored_filename != Path(stored_filename).name
+                    ):
+                              abort(404)
+                    document_path = paths["directory"] / stored_filename
+                    if not document_path.is_file():
+                              abort(404)
+                    return send_file(
+                              document_path,
+                              as_attachment=False,
+                              download_name=metadata.get("original_filename", stored_filename),
+                    )
+          except (OSError, json.JSONDecodeError, TypeError):
+                    current_app.logger.exception("Dokumen asli gagal dibaca")
+                    abort(500)
 @upload_bp.route("/<document_id>/extract", methods=["POST"])
 def extract_document(document_id):
-    token = get_upload_token()
-
-    if not is_valid_csrf_token(token):
-        return render_upload_error(token, "Sesi formulir berubah. Coba lagi.", 400)
-
-    metadata = {}
-
-    try:
-        paths = get_document_paths(document_id)
-        if not paths["metadata"].is_file():
-            return render_upload_error(token, "Dokumen tidak ditemukan.", 404)
-
-        metadata = json.loads(paths["metadata"].read_text(encoding="utf-8"))
-        if not isinstance(metadata, dict):
-            return render_upload_error(token, "Metadata dokumen tidak valid.", 400)
-
-        document_type = metadata.get("document_type")
-        stored_filename = metadata.get("stored_filename")
-        if (
-            document_type not in {"PDF", "IMAGE"}
-            or not stored_filename
-            or stored_filename != Path(stored_filename).name
-        ):
-            return render_review_page(
-                token,
-                metadata,
-                error="Metadata dokumen tidak valid.",
-                status_code=400,
-            )
-
-        document_path = paths["directory"] / stored_filename
-        if not document_path.is_file():
-            return render_review_page(
-                token,
-                metadata,
-                error="File dokumen tidak ditemukan.",
-                status_code=404,
-            )
-
-        processing_started = time.perf_counter()
-        extraction_started = time.perf_counter()
-
-        if document_type == "PDF":
-            extraction = extract_pdf_text(document_path, paths["extracted"])
-            if extraction["status"] == "OCR_REQUIRED":
-                extraction = extract_document_with_bedrock(
-                    document_path=document_path,
-                    document_type="PDF",
-                    output_path=paths["extracted"],
-                    model_id=current_app.config["BEDROCK_MODEL_ID"],
-                    aws_region=current_app.config["AWS_REGION"],
-                )
-            else:
-                extraction["extraction_method"] = "PYMUPDF"
-        else:
-            extraction = extract_document_with_bedrock(
-                document_path=document_path,
-                document_type="IMAGE",
-                output_path=paths["extracted"],
-                model_id=current_app.config["BEDROCK_MODEL_ID"],
-                aws_region=current_app.config["AWS_REGION"],
-            )
-
-        extraction_time = round(time.perf_counter() - extraction_started, 2)
-        extracted_text = paths["extracted"].read_text(encoding="utf-8")
-
-        metadata.update(
-            {
-                "ocr_status": extraction["status"],
-                "extracted_filename": "extracted.txt",
-                "extraction_method": extraction["extraction_method"],
-                "status": "OCR_EXTRACTED",
-            }
-        )
-
-        invoice_started = time.perf_counter()
-        invoice_result = extract_invoice_data_with_bedrock(
-            extracted_text=extracted_text,
-            model_id=current_app.config["BEDROCK_MODEL_ID"],
-            aws_region=current_app.config["AWS_REGION"],
-        )
-        invoices = invoice_result.get("invoices", [])
-        if not invoices:
-            raise OcrError("Tidak ada invoice yang ditemukan dalam dokumen.")
-
-        validations = [validate_invoice_data(invoice) for invoice in invoices]
-        records = [
-            {
-                "data": invoice,
-                "validation": validations[index],
-                "status": (
-                    "READY_FOR_REVIEW"
-                    if validations[index]["valid"]
-                    else "NEEDS_REVIEW"
-                ),
-                "previewed": False,
-            }
-            for index, invoice in enumerate(invoices)
-        ]
-
-        validation = {
-            "valid": all(item["valid"] for item in validations),
-            "issues": [
-                f"Invoice {index + 1}: {issue}"
-                for index, item in enumerate(validations)
-                for issue in item["issues"]
-            ],
-        }
-
-        invoice_time = round(time.perf_counter() - invoice_started, 2)
-        processing_time = round(time.perf_counter() - processing_started, 2)
-
-        save_records_for_document(paths, document_id, records)
-
-        metadata["document_id"] = document_id
-        metadata["invoice_data_filename"] = "invoice_data.json"
-        metadata["invoice_count"] = len(records)
-        metadata["validation"] = validation
-        metadata["status"] = (
-            "READY_FOR_REVIEW" if validation["valid"] else "NEEDS_REVIEW"
-        )
-        metadata.setdefault("timing", {}).update(
-            {
-                "extraction_time_seconds": extraction_time,
-                "invoice_time_seconds": invoice_time,
-                "processing_time_seconds": processing_time,
-            }
-        )
-        paths["metadata"].write_text(
-            json.dumps(metadata, indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
-
-        return render_review_page(
-            token,
-            metadata,
-            invoice_data=records[0]["data"],
-            extracted_text=extracted_text,
-            validation=records[0]["validation"],
-            invoice_records=records,
-            invoice_index=0,
-        )
-
-    except OcrError as error:
-        current_app.logger.exception("Pemrosesan OCR atau Bedrock gagal")
-        return render_upload_error(
-            token,
-            str(error),
-            502,
-            result=metadata,
-        )
-    except UploadError as error:
-        return render_upload_error(token, str(error), 400, result=metadata)
-    except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError):
-        current_app.logger.exception("Ekstraksi dokumen gagal")
-        return render_upload_error(
-            token,
-            "Dokumen atau metadata gagal dibaca/disimpan.",
-            500,
-            result=metadata,
-        )
-
-
+          roles = set(session.get("roles", []))
+          if "INTAKE_SUPPORT" not in roles or "SYSTEM_ADMIN" in roles:
+                    abort(403)
+          document = _require_document_company_access(document_id)
+          if document["uploaded_by_user_id"] != session.get("user_id"):
+                    abort(403)
+          token = get_upload_token()
+          if not is_valid_csrf_token(token):
+                    return render_upload_error(token, "Sesi formulir berubah. Coba lagi.", 400)
+          metadata = {}
+          try:
+                    paths = get_document_paths(document_id)
+                    if not paths["metadata"].is_file():
+                              return render_upload_error(token, "Dokumen tidak ditemukan.", 404)
+                    metadata = json.loads(paths["metadata"].read_text(encoding="utf-8"))
+                    if not isinstance(metadata, dict):
+                              return render_upload_error(token, "Metadata dokumen tidak valid.", 400)
+                    document_type = metadata.get("document_type")
+                    stored_filename = metadata.get("stored_filename")
+                    if (
+                              document_type not in {"PDF", "IMAGE"}
+                              or not stored_filename
+                              or stored_filename != Path(stored_filename).name
+                    ):
+                              return render_review_page(
+                                        token,
+                                        metadata,
+                                        error="Metadata dokumen tidak valid.",
+                                        status_code=400,
+                              )
+                    document_path = paths["directory"] / stored_filename
+                    if not document_path.is_file():
+                              return render_review_page(
+                                        token,
+                                        metadata,
+                                        error="File dokumen tidak ditemukan.",
+                                        status_code=404,
+                              )
+                    processing_started = time.perf_counter()
+                    extraction_started = time.perf_counter()
+                    if document_type == "PDF":
+                              extraction = extract_pdf_text(document_path, paths["extracted"])
+                              if extraction["status"] == "OCR_REQUIRED":
+                                        extraction = extract_document_with_bedrock(
+                                                  document_path=document_path,
+                                                  document_type="PDF",
+                                                  output_path=paths["extracted"],
+                                                  model_id=current_app.config["BEDROCK_MODEL_ID"],
+                                                  aws_region=current_app.config["AWS_REGION"],
+                                        )
+                              else:
+                                        extraction["extraction_method"] = "PYMUPDF"
+                    else:
+                              extraction = extract_document_with_bedrock(
+                                        document_path=document_path,
+                                        document_type="IMAGE",
+                                        output_path=paths["extracted"],
+                                        model_id=current_app.config["BEDROCK_MODEL_ID"],
+                                        aws_region=current_app.config["AWS_REGION"],
+                              )
+                    extraction_time = round(time.perf_counter() - extraction_started, 2)
+                    extracted_text = paths["extracted"].read_text(encoding="utf-8")
+                    metadata.update(
+                              {
+                                        "ocr_status": extraction["status"],
+                                        "extracted_filename": "extracted.txt",
+                                        "extraction_method": extraction["extraction_method"],
+                                        "status": "OCR_EXTRACTED",
+                              }
+                    )
+                    invoice_started = time.perf_counter()
+                    invoice_result = extract_invoice_data_with_bedrock(
+                              extracted_text=extracted_text,
+                              model_id=current_app.config["BEDROCK_MODEL_ID"],
+                              aws_region=current_app.config["AWS_REGION"],
+                    )
+                    invoices = invoice_result.get("invoices", [])
+                    if not invoices:
+                              raise OcrError("Tidak ada invoice yang ditemukan dalam dokumen.")
+                    validations = [validate_invoice_data(invoice) for invoice in invoices]
+                    records = [
+                              {
+                                        "data": invoice,
+                                        "validation": validations[index],
+                                        "status": (
+                                                  "READY_FOR_REVIEW"
+                                                  if validations[index]["valid"]
+                                                  else "NEEDS_REVIEW"
+                                        ),
+                                        "previewed": False,
+                              }
+                              for index, invoice in enumerate(invoices)
+                    ]
+                    validation = {
+                              "valid": all(item["valid"] for item in validations),
+                              "issues": [
+                                        f"Invoice {index + 1}: {issue}"
+                                        for index, item in enumerate(validations)
+                                        for issue in item["issues"]
+                              ],
+                    }
+                    invoice_time = round(time.perf_counter() - invoice_started, 2)
+                    processing_time = round(time.perf_counter() - processing_started, 2)
+                    save_records_for_document(paths, document_id, records)
+                    metadata["document_id"] = document_id
+                    metadata["invoice_data_filename"] = "invoice_data.json"
+                    metadata["invoice_count"] = len(records)
+                    metadata["validation"] = validation
+                    metadata["status"] = (
+                              "READY_FOR_REVIEW" if validation["valid"] else "NEEDS_REVIEW"
+                    )
+                    metadata.setdefault("timing", {}).update(
+                              {
+                                        "extraction_time_seconds": extraction_time,
+                                        "invoice_time_seconds": invoice_time,
+                                        "processing_time_seconds": processing_time,
+                              }
+                    )
+                    paths["metadata"].write_text(
+                              json.dumps(metadata, indent=2, ensure_ascii=False),
+                              encoding="utf-8",
+                    )
+                    return render_review_page(
+                              token,
+                              metadata,
+                              invoice_data=records[0]["data"],
+                              extracted_text=extracted_text,
+                              validation=records[0]["validation"],
+                              invoice_records=records,
+                              invoice_index=0,
+                    )
+          except OcrError as error:
+                    current_app.logger.exception("Pemrosesan OCR atau Bedrock gagal")
+                    return render_upload_error(
+                              token,
+                              str(error),
+                              502,
+                              result=metadata,
+                    )
+          except UploadError as error:
+                    return render_upload_error(token, str(error), 400, result=metadata)
+          except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError):
+                    current_app.logger.exception("Ekstraksi dokumen gagal")
+                    return render_upload_error(
+                              token,
+                              "Dokumen atau metadata gagal dibaca/disimpan.",
+                              500,
+                              result=metadata,
+                    )
 @upload_bp.route("/<document_id>/review", methods=["GET", "POST"])
 def review_invoice(document_id):
-    token = get_upload_token()
-
-    if not DOCUMENT_ID_PATTERN.fullmatch(document_id):
-        abort(400)
-
-    paths = get_document_paths(document_id)
-
-    if request.method == "GET":
-        if not paths["metadata"].is_file():
-            abort(404)
-
-        try:
-            metadata = json.loads(paths["metadata"].read_text(encoding="utf-8"))
-            if not isinstance(metadata, dict):
-                abort(404)
-
-            records = load_records_for_document(paths, metadata)
-            if not records:
-                abort(404)
-
-            if metadata.get("status") not in {
-                "READY_FOR_REVIEW",
-                "NEEDS_REVIEW",
-                "EXCEPTION",
-                "APPROVED",
-            }:
-                return redirect(url_for("upload.queue_page"))
-
-            invoice_index = request.args.get("invoice", 0, type=int) or 0
-            invoice_index = min(max(invoice_index, 0), len(records) - 1)
-
-            mark_invoice_previewed(
-                current_app.config["DATABASE_URL"],
-                document_id,
-                invoice_index,
-            )
-            mark_previewed(
-                current_app.config["DATABASE_URL"],
-                document_id,
-            )
-            records[invoice_index]["previewed"] = True
-            paths["invoice_data"].write_text(
-                json.dumps({"invoices": records}, indent=2, ensure_ascii=False),
-                encoding="utf-8",
-            )
-
-            return render_review_page(
-                token,
-                metadata,
-                invoice_data=records[invoice_index]["data"],
-                extracted_text=(
-                    paths["extracted"].read_text(encoding="utf-8")
-                    if paths["extracted"].is_file()
-                    else ""
-                ),
-                invoice_records=records,
-                invoice_index=invoice_index,
-                validation=records[invoice_index]["validation"],
-            )
-        except (OSError, json.JSONDecodeError, TypeError, ValueError):
-            current_app.logger.exception("Human Review gagal dibuka")
-            abort(500)
-
-    if not is_valid_csrf_token(token):
-        return render_upload_error(token, "Sesi formulir berubah. Coba lagi.", 400)
-
-    review_action = request.form.get("review_action")
-    if review_action not in {"save", "approve"}:
-        return render_upload_error(token, "Aksi review tidak valid.", 400)
-
-    try:
-        if not paths["metadata"].is_file():
-            return render_upload_error(token, "Dokumen tidak ditemukan.", 404)
-
-        metadata = json.loads(paths["metadata"].read_text(encoding="utf-8"))
-        if not isinstance(metadata, dict):
-            return render_upload_error(
-                token,
-                "Metadata dokumen tidak valid.",
-                400,
-            )
-
-        records = load_records_for_document(paths, metadata)
-        invoice_index = request.form.get("invoice_index", "0", type=int)
-
-        if (
-            not records
-            or invoice_index is None
-            or not 0 <= invoice_index < len(records)
-        ):
-            return render_upload_error(
-                token,
-                "Invoice yang dipilih tidak valid.",
-                400,
-            )
-
-        record = records[invoice_index]
-        invoice_data = record["data"]
-
-        if record.get("status") == "APPROVED":
-            return render_review_page(
-                token,
-                metadata,
-                invoice_data=invoice_data,
-                invoice_records=records,
-                invoice_index=invoice_index,
-                validation=record.get("validation"),
-                extracted_text=(
-                    paths["extracted"].read_text(encoding="utf-8")
-                    if paths["extracted"].is_file()
-                    else ""
-                ),
-                error="Invoice sudah disetujui dan tidak dapat diedit.",
-                status_code=409,
-            )
-
-        for field in EDITABLE_INVOICE_FIELDS:
-            value = request.form.get(field, "").strip()
-            invoice_data[field] = value or None
-
-        submitted_items = {}
-        for field_name, value in request.form.items():
-            match = LINE_ITEM_PATTERN.fullmatch(field_name)
-            if match:
-                index = int(match.group(1))
-                item_field = match.group(2)
-                submitted_items.setdefault(index, {})[item_field] = (
-                    value.strip() or None
-                )
-
-        if "line_items_submitted" in request.form or submitted_items:
-            existing_items = invoice_data.get("line_items", [])
-            if not isinstance(existing_items, list):
-                existing_items = []
-
-            reviewed_items = []
-            for index in sorted(submitted_items):
-                item = submitted_items[index]
-                existing_item = (
-                    existing_items[index]
-                    if index < len(existing_items)
-                    and isinstance(existing_items[index], dict)
-                    else {}
-                )
-                reviewed_items.append(
-                    {
-                        "line_number": (
-                            existing_item.get("line_number")
-                            or str(index + 1)
-                        ),
-                        "description": item.get("description"),
-                        "quantity": item.get("quantity"),
-                        "unit_price": item.get("unit_price"),
-                        "line_total": item.get("line_total"),
+          token = get_upload_token()
+          _require_review_access(document_id)
+          if not DOCUMENT_ID_PATTERN.fullmatch(document_id):
+                    abort(400)
+          paths = get_document_paths(document_id)
+          if request.method == "GET":
+                    if not paths["metadata"].is_file():
+                              abort(404)
+                    try:
+                              metadata = json.loads(paths["metadata"].read_text(encoding="utf-8"))
+                              if not isinstance(metadata, dict):
+                                        abort(404)
+                              records = load_records_for_document(paths, metadata)
+                              if not records:
+                                        abort(404)
+                              if metadata.get("status") not in {
+                                        "READY_FOR_REVIEW",
+                                        "NEEDS_REVIEW",
+                                        "EXCEPTION",
+                                        "APPROVED",
+                              }:
+                                        return redirect(url_for("upload.queue_page"))
+                              invoice_index = request.args.get("invoice", 0, type=int) or 0
+                              invoice_index = min(max(invoice_index, 0), len(records) - 1)
+                              mark_invoice_previewed(
+                                        current_app.config["DATABASE_URL"],
+                                        document_id,
+                                        invoice_index,
+                              )
+                              mark_previewed(
+                                        current_app.config["DATABASE_URL"],
+                                        document_id,
+                              )
+                              records[invoice_index]["previewed"] = True
+                              _write_upload_audit(
+                                        "INVOICE_REVIEW_OPENED",
+                                        "INVOICE",
+                                        f"{document_id}:{invoice_index}",
+                                        new_value={"invoice_index": invoice_index},
+                              )
+                              paths["invoice_data"].write_text(
+                                        json.dumps({"invoices": records}, indent=2, ensure_ascii=False),
+                                        encoding="utf-8",
+                              )
+                              return render_review_page(
+                                        token,
+                                        metadata,
+                                        invoice_data=records[invoice_index]["data"],
+                                        extracted_text=(
+                                                  paths["extracted"].read_text(encoding="utf-8")
+                                                  if paths["extracted"].is_file()
+                                                  else ""
+                                        ),
+                                        invoice_records=records,
+                                        invoice_index=invoice_index,
+                                        validation=records[invoice_index]["validation"],
+                              )
+                    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+                              current_app.logger.exception("Human Review gagal dibuka")
+                              abort(500)
+          if not is_valid_csrf_token(token):
+                    return render_upload_error(token, "Sesi formulir berubah. Coba lagi.", 400)
+          review_action = request.form.get("review_action")
+          if review_action not in {"save", "approve"}:
+                    return render_upload_error(token, "Aksi review tidak valid.", 400)
+          try:
+                    if not paths["metadata"].is_file():
+                              return render_upload_error(token, "Dokumen tidak ditemukan.", 404)
+                    metadata = json.loads(paths["metadata"].read_text(encoding="utf-8"))
+                    if not isinstance(metadata, dict):
+                              return render_upload_error(
+                                        token,
+                                        "Metadata dokumen tidak valid.",
+                                        400,
+                              )
+                    records = load_records_for_document(paths, metadata)
+                    invoice_index = request.form.get("invoice_index", "0", type=int)
+                    if (
+                              not records
+                              or invoice_index is None
+                              or not 0 <= invoice_index < len(records)
+                    ):
+                              return render_upload_error(
+                                        token,
+                                        "Invoice yang dipilih tidak valid.",
+                                        400,
+                              )
+                    record = records[invoice_index]
+                    old_record_snapshot = json.loads(json.dumps(record, ensure_ascii=False))
+                    invoice_data = record["data"]
+                    if record.get("status") == "APPROVED":
+                              return render_review_page(
+                                        token,
+                                        metadata,
+                                        invoice_data=invoice_data,
+                                        invoice_records=records,
+                                        invoice_index=invoice_index,
+                                        validation=record.get("validation"),
+                                        extracted_text=(
+                                                  paths["extracted"].read_text(encoding="utf-8")
+                                                  if paths["extracted"].is_file()
+                                                  else ""
+                                        ),
+                                        error="Invoice sudah disetujui dan tidak dapat diedit.",
+                                        status_code=409,
+                              )
+                    for field in EDITABLE_INVOICE_FIELDS:
+                              value = request.form.get(field, "").strip()
+                              invoice_data[field] = value or None
+                    submitted_items = {}
+                    for field_name, value in request.form.items():
+                              match = LINE_ITEM_PATTERN.fullmatch(field_name)
+                              if match:
+                                        index = int(match.group(1))
+                                        item_field = match.group(2)
+                                        submitted_items.setdefault(index, {})[item_field] = (
+                                                  value.strip() or None
+                                        )
+                    if "line_items_submitted" in request.form or submitted_items:
+                              existing_items = invoice_data.get("line_items", [])
+                              if not isinstance(existing_items, list):
+                                        existing_items = []
+                              reviewed_items = []
+                              for index in sorted(submitted_items):
+                                        item = submitted_items[index]
+                                        existing_item = (
+                                                  existing_items[index]
+                                                  if index < len(existing_items)
+                                                  and isinstance(existing_items[index], dict)
+                                                  else {}
+                                        )
+                                        reviewed_items.append(
+                                                  {
+                                                            "line_number": (
+                                                                      existing_item.get("line_number")
+                                                                      or str(index + 1)
+                                                            ),
+                                                            "description": item.get("description"),
+                                                            "quantity": item.get("quantity"),
+                                                            "unit_price": item.get("unit_price"),
+                                                            "line_total": item.get("line_total"),
+                                                  }
+                                        )
+                              invoice_data["line_items"] = reviewed_items
+                    validation = validate_invoice_data(invoice_data)
+                    record["data"] = invoice_data
+                    record["validation"] = validation
+                    if review_action == "approve" and validation["valid"]:
+                              record["status"] = "APPROVED"
+                    else:
+                              record["status"] = (
+                                        "READY_FOR_REVIEW" if validation["valid"] else "NEEDS_REVIEW"
+                              )
+                    records[invoice_index] = record
+                    save_records_for_document(paths, document_id, records)
+                    all_approved = all(
+                              item.get("status") == "APPROVED"
+                              for item in records
+                    )
+                    overall_validation = {
+                              "valid": all(
+                                        item.get("validation", {}).get("valid", False)
+                                        for item in records
+                              ),
+                              "issues": [
+                                        f"Invoice {index + 1}: {issue}"
+                                        for index, item in enumerate(records)
+                                        for issue in item.get("validation", {}).get("issues", [])
+                              ],
                     }
-                )
-            invoice_data["line_items"] = reviewed_items
-
-        validation = validate_invoice_data(invoice_data)
-        record["data"] = invoice_data
-        record["validation"] = validation
-
-        if review_action == "approve" and validation["valid"]:
-            record["status"] = "APPROVED"
-        else:
-            record["status"] = (
-                "READY_FOR_REVIEW" if validation["valid"] else "NEEDS_REVIEW"
-            )
-
-        records[invoice_index] = record
-        save_records_for_document(paths, document_id, records)
-
-        all_approved = all(
-            item.get("status") == "APPROVED"
-            for item in records
-        )
-        overall_validation = {
-            "valid": all(
-                item.get("validation", {}).get("valid", False)
-                for item in records
-            ),
-            "issues": [
-                f"Invoice {index + 1}: {issue}"
-                for index, item in enumerate(records)
-                for issue in item.get("validation", {}).get("issues", [])
-            ],
-        }
-
-        metadata["document_id"] = document_id
-        metadata["invoice_data_filename"] = "invoice_data.json"
-        metadata["invoice_count"] = len(records)
-        metadata["validation"] = overall_validation
-        metadata["status"] = (
-            "APPROVED"
-            if all_approved
-            else (
-                "READY_FOR_REVIEW"
-                if overall_validation["valid"]
-                else "NEEDS_REVIEW"
-            )
-        )
-        paths["metadata"].write_text(
-            json.dumps(metadata, indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
-
-        update_queue_item(
-            current_app.config["DATABASE_URL"],
-            document_id,
-            status=metadata["status"],
-            stage=(
-                "Semua invoice disetujui"
-                if all_approved
-                else f"Review invoice {invoice_index + 1} dari {len(records)}"
-            ),
-            stage_step=3,
-        )
-
-        extracted_text = (
-            paths["extracted"].read_text(encoding="utf-8")
-            if paths["extracted"].is_file()
-            else ""
-        )
-        return render_review_page(
-            token,
-            metadata,
-            invoice_data=invoice_data,
-            invoice_records=records,
-            invoice_index=invoice_index,
-            validation=validation,
-            extracted_text=extracted_text,
-        )
-
-    except (OSError, json.JSONDecodeError, TypeError, KeyError, ValueError):
-        current_app.logger.exception("Review invoice gagal disimpan")
-        return render_upload_error(
-            token,
-            "Data review gagal dibaca atau disimpan.",
-            500,
-        )
-
-
+                    metadata["document_id"] = document_id
+                    metadata["invoice_data_filename"] = "invoice_data.json"
+                    metadata["invoice_count"] = len(records)
+                    metadata["validation"] = overall_validation
+                    metadata["status"] = (
+                              "APPROVED"
+                              if all_approved
+                              else (
+                                        "READY_FOR_REVIEW"
+                                        if overall_validation["valid"]
+                                        else "NEEDS_REVIEW"
+                              )
+                    )
+                    paths["metadata"].write_text(
+                              json.dumps(metadata, indent=2, ensure_ascii=False),
+                              encoding="utf-8",
+                    )
+                    update_queue_item(
+                              current_app.config["DATABASE_URL"],
+                              document_id,
+                              status=metadata["status"],
+                              stage=(
+                                        "Semua invoice disetujui"
+                                        if all_approved
+                                        else f"Review invoice {invoice_index + 1} dari {len(records)}"
+                              ),
+                              stage_step=3,
+                    )
+                    _write_upload_audit(
+                              "INVOICE_APPROVED" if review_action == "approve" and validation["valid"] else "INVOICE_REVIEW_SAVED",
+                              "INVOICE",
+                              f"{document_id}:{invoice_index}",
+                              old_value=old_record_snapshot,
+                              new_value=record,
+                    )
+                    extracted_text = (
+                              paths["extracted"].read_text(encoding="utf-8")
+                              if paths["extracted"].is_file()
+                              else ""
+                    )
+                    return render_review_page(
+                              token,
+                              metadata,
+                              invoice_data=invoice_data,
+                              invoice_records=records,
+                              invoice_index=invoice_index,
+                              validation=validation,
+                              extracted_text=extracted_text,
+                    )
+          except (OSError, json.JSONDecodeError, TypeError, KeyError, ValueError):
+                    current_app.logger.exception("Review invoice gagal disimpan")
+                    return render_upload_error(
+                              token,
+                              "Data review gagal dibaca atau disimpan.",
+                              500,
+                    )
 def prepare_voucher_pdf(document_id, invoice_index=0):
-    paths = get_document_paths(document_id)
-    try:
-        invoice_index = int(invoice_index)
-    except (TypeError, ValueError):
-        abort(400)
-
-    if not paths["metadata"].is_file():
-        abort(404)
-
-    metadata = json.loads(paths["metadata"].read_text(encoding="utf-8"))
-    if not isinstance(metadata, dict):
-        abort(400)
-
-    records = load_records_for_document(paths, metadata)
-    if not 0 <= invoice_index < len(records):
-        abort(404)
-
-    record = records[invoice_index]
-    if record.get("status") != "APPROVED":
-        abort(409)
-
-    invoice_data = record["data"]
-    voucher_numbers = metadata.setdefault("voucher_numbers", {})
-    voucher_number = voucher_numbers.get(str(invoice_index))
-
-    if not voucher_number:
-        voucher_number = (
-            f"VCH-{document_id[:8].upper()}-{invoice_index + 1:02d}"
-        )
-        voucher_numbers[str(invoice_index)] = voucher_number
-        paths["metadata"].write_text(
-            json.dumps(metadata, indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
-
-    pdf_path = paths["directory"] / f"voucher_{invoice_index + 1}.pdf"
-    generate_voucher_pdf(
-        invoice_data=invoice_data,
-        output_path=pdf_path,
-        voucher_number=voucher_number,
-        requester_name=None,
-        approver_name=None,
-    )
-
-    safe_filename = re.sub(r"[^A-Za-z0-9._-]", "_", voucher_number)
-    return pdf_path, safe_filename
-
-
+          paths = get_document_paths(document_id)
+          try:
+                    invoice_index = int(invoice_index)
+          except (TypeError, ValueError):
+                    abort(400)
+          if not paths["metadata"].is_file():
+                    abort(404)
+          metadata = json.loads(paths["metadata"].read_text(encoding="utf-8"))
+          if not isinstance(metadata, dict):
+                    abort(400)
+          records = load_records_for_document(paths, metadata)
+          if not 0 <= invoice_index < len(records):
+                    abort(404)
+          record = records[invoice_index]
+          if record.get("status") != "APPROVED":
+                    abort(409)
+          invoice_data = record["data"]
+          voucher_numbers = metadata.setdefault("voucher_numbers", {})
+          voucher_number = voucher_numbers.get(str(invoice_index))
+          if not voucher_number:
+                    voucher_number = (
+                              f"VCH-{document_id[:8].upper()}-{invoice_index + 1:02d}"
+                    )
+                    voucher_numbers[str(invoice_index)] = voucher_number
+                    paths["metadata"].write_text(
+                              json.dumps(metadata, indent=2, ensure_ascii=False),
+                              encoding="utf-8",
+                    )
+          pdf_path = paths["directory"] / f"voucher_{invoice_index + 1}.pdf"
+          generate_voucher_pdf(
+                    invoice_data=invoice_data,
+                    output_path=pdf_path,
+                    voucher_number=voucher_number,
+                    requester_name=None,
+                    approver_name=None,
+          )
+          safe_filename = re.sub(r"[^A-Za-z0-9._-]", "_", voucher_number)
+          return pdf_path, safe_filename
 @upload_bp.route("/<document_id>/voucher/preview", methods=["GET"])
 def preview_voucher(document_id):
-    try:
-        invoice_index = request.args.get("invoice", 0, type=int) or 0
-        _, voucher_filename = prepare_voucher_pdf(document_id, invoice_index)
-        return render_template(
-            "voucher_preview.html",
-            document_id=document_id,
-            voucher_filename=voucher_filename,
-            invoice_index=invoice_index,
-            token=get_upload_token(),
-        )
-    except Exception:
-        current_app.logger.exception("Preview voucher gagal dibuat")
-        return render_upload_error(
-            get_upload_token(),
-            "Preview voucher gagal dibuat.",
-            500,
-        )
-
-
+          _require_voucher_access(document_id)
+          try:
+                    invoice_index = request.args.get("invoice", 0, type=int) or 0
+                    _, voucher_filename = prepare_voucher_pdf(document_id, invoice_index)
+                    _write_upload_audit(
+                              "VOUCHER_PREVIEWED",
+                              "VOUCHER",
+                              f"{document_id}:{invoice_index}",
+                              new_value={"voucher_filename": voucher_filename},
+                    )
+                    return render_template(
+                              "voucher_preview.html",
+                              document_id=document_id,
+                              voucher_filename=voucher_filename,
+                              invoice_index=invoice_index,
+                              token=get_upload_token(),
+                    )
+          except HTTPException:
+                    raise
+          except Exception:
+                    current_app.logger.exception("Preview voucher gagal dibuat")
+                    return render_upload_error(
+                              get_upload_token(),
+                              "Preview voucher gagal dibuat.",
+                              500,
+                    )
 @upload_bp.route("/<document_id>/voucher/preview.pdf", methods=["GET"])
 def voucher_preview_pdf(document_id):
-    try:
-        invoice_index = request.args.get("invoice", 0, type=int) or 0
-        pdf_path, voucher_filename = prepare_voucher_pdf(
-            document_id,
-            invoice_index,
-        )
-        return send_file(
-            pdf_path,
-            mimetype="application/pdf",
-            as_attachment=False,
-            download_name=f"{voucher_filename}.pdf",
-        )
-    except Exception:
-        current_app.logger.exception("PDF preview voucher gagal dibuat")
-        abort(500)
-
-
+          _require_voucher_access(document_id)
+          try:
+                    invoice_index = request.args.get("invoice", 0, type=int) or 0
+                    pdf_path, voucher_filename = prepare_voucher_pdf(
+                              document_id,
+                              invoice_index,
+                    )
+                    _write_upload_audit(
+                              "VOUCHER_PREVIEWED",
+                              "VOUCHER",
+                              f"{document_id}:{invoice_index}",
+                              new_value={"voucher_filename": voucher_filename},
+                    )
+                    return send_file(
+                              pdf_path,
+                              mimetype="application/pdf",
+                              as_attachment=False,
+                              download_name=f"{voucher_filename}.pdf",
+                    )
+          except HTTPException:
+                    raise
+          except Exception:
+                    current_app.logger.exception("PDF preview voucher gagal dibuat")
+                    abort(500)
 @upload_bp.route("/<document_id>/voucher/generate", methods=["POST"])
 def generate_voucher(document_id):
-    token = get_upload_token()
-
-    if not is_valid_csrf_token(token):
-        return render_upload_error(token, "Sesi formulir berubah. Coba lagi.", 400)
-
-    try:
-        invoice_index = request.form.get("invoice_index", "0", type=int) or 0
-        pdf_path, voucher_filename = prepare_voucher_pdf(
-            document_id,
-            invoice_index,
-        )
-        return send_file(
-            pdf_path,
-            mimetype="application/pdf",
-            as_attachment=True,
-            download_name=f"{voucher_filename}.pdf",
-        )
-    except Exception:
-        current_app.logger.exception("Unduhan voucher gagal")
-        return render_upload_error(
-            token,
-            "Voucher gagal dibuat. Coba lagi.",
-            500,
-        )
+          _require_voucher_access(document_id)
+          token = get_upload_token()
+          if not is_valid_csrf_token(token):
+                    return render_upload_error(token, "Sesi formulir berubah. Coba lagi.", 400)
+          try:
+                    invoice_index = request.form.get("invoice_index", "0", type=int) or 0
+                    pdf_path, voucher_filename = prepare_voucher_pdf(
+                              document_id,
+                              invoice_index,
+                    )
+                    _write_upload_audit(
+                              "VOUCHER_DOWNLOADED",
+                              "VOUCHER",
+                              f"{document_id}:{invoice_index}",
+                              new_value={"voucher_filename": voucher_filename},
+                    )
+                    return send_file(
+                              pdf_path,
+                              mimetype="application/pdf",
+                              as_attachment=True,
+                              download_name=f"{voucher_filename}.pdf",
+                    )
+          except HTTPException:
+                    raise
+          except Exception:
+                    current_app.logger.exception("Unduhan voucher gagal")
+                    return render_upload_error(
+                              token,
+                              "Voucher gagal dibuat. Coba lagi.",
+                              500,
+                    )

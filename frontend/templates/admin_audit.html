@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Audit Log · AMIGA</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172321;
+      --muted: #66736f;
+      --line: #e2e9e6;
+      --surface: #ffffff;
+      --canvas: #f4f7f5;
+      --green: #0e6b50;
+      --green-soft: #e9f5ef;
+      --shadow: 0 12px 36px rgba(18, 43, 33, .06);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--canvas);
+      font: 15px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    a { color: inherit; text-decoration: none; }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      min-height: 72px;
+      padding: 14px clamp(20px, 5vw, 64px);
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { font-size: 20px; font-weight: 800; letter-spacing: -.04em; }
+    .brand span { color: var(--green); }
+    .nav { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .nav a, .logout {
+      padding: 9px 13px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: #35423e;
+      background: #fff;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    .nav a.active { color: var(--green); background: var(--green-soft); border-color: #cce5d7; }
+    .logout:hover, .nav a:hover { border-color: #b6c8c0; }
+    main { width: min(1440px, calc(100% - 40px)); margin: 38px auto 64px; }
+    .heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 24px;
+      margin-bottom: 22px;
+    }
+    .eyebrow { margin: 0 0 6px; color: var(--green); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(27px, 4vw, 38px); line-height: 1.15; letter-spacing: -.045em; }
+    .intro { max-width: 680px; margin: 10px 0 0; color: var(--muted); }
+    .count {
+      flex: 0 0 auto;
+      padding: 9px 13px;
+      border: 1px solid #d6e6dd;
+      border-radius: 999px;
+      color: var(--green);
+      background: var(--green-soft);
+      font-size: 13px;
+      font-weight: 750;
+    }
+    .panel {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; min-width: 1040px; border-collapse: collapse; }
+    th {
+      padding: 13px 15px;
+      color: #65736e;
+      background: #f8faf9;
+      border-bottom: 1px solid var(--line);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-align: left;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    td {
+      padding: 15px;
+      border-bottom: 1px solid #edf1ef;
+      vertical-align: top;
+    }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:hover { background: #fcfdfc; }
+    .id { color: #81908a; font-size: 12px; font-variant-numeric: tabular-nums; }
+    .actor { min-width: 145px; font-weight: 700; }
+    .action {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 7px;
+      color: #185b47;
+      background: #eaf5ef;
+      font-size: 12px;
+      font-weight: 750;
+      overflow-wrap: anywhere;
+    }
+    .entity { min-width: 120px; }
+    .entity strong { display: block; font-size: 13px; }
+    .entity span { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+    time { display: block; min-width: 145px; color: #52615b; font-size: 12px; }
+    details { min-width: 170px; max-width: 300px; }
+    summary {
+      width: fit-content;
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+    pre {
+      max-height: 240px;
+      max-width: 300px;
+      overflow: auto;
+      margin: 9px 0 0;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      color: #35423e;
+      background: #f7f9f8;
+      font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .empty { padding: 56px 22px; color: var(--muted); text-align: center; }
+    .empty strong { display: block; margin-bottom: 5px; color: var(--ink); font-size: 16px; }
+    @media (max-width: 720px) {
+      .topbar { align-items: flex-start; flex-direction: column; }
+      main { width: min(100% - 28px, 1440px); margin-top: 26px; }
+      .heading { align-items: flex-start; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('auth.admin_dashboard') }}" aria-label="AMIGA Admin"><span>AMIGA</span> Admin</a>
+    <nav class="nav" aria-label="Navigasi admin">
+      <a href="{{ url_for('auth.admin_dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('admin.manage') }}">Akun &amp; perusahaan</a>
+      <a href="{{ url_for('upload.queue_page') }}">Antrean</a>
+      <a class="active" href="{{ url_for('admin.audit_log') }}" aria-current="page">Audit log</a>
+      <form method="post" action="{{ url_for('auth.logout') }}" style="margin:0">
+        {% if csrf_token is defined %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endif %}
+        <button class="logout" type="submit">Keluar</button>
+      </form>
+    </nav>
+  </header>
+
+  <main>
+    <section class="heading">
+      <div>
+        <p class="eyebrow">Administrasi · Jejak aktivitas</p>
+        <h1>Audit log</h1>
+        <p class="intro">Riwayat perubahan akun dan akses perusahaan, serta aktivitas dokumen yang dicatat sistem. Data ditampilkan paling baru terlebih dahulu.</p>
+      </div>
+      <span class="count">{{ entries|length }} aktivitas terbaru</span>
+    </section>
+
+    <section class="panel" aria-label="Daftar audit log">
+      {% if entries %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Waktu</th>
+              <th>Pelaku</th>
+              <th>Aksi</th>
+              <th>Entitas</th>
+              <th>Perubahan sebelumnya</th>
+              <th>Perubahan terbaru</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in entries %}
+            <tr>
+              <td class="id">#{{ entry.audit_id }}</td>
+              <td><time>{{ entry.created_at }}</time></td>
+              <td class="actor">
+                {{ entry.actor_name or 'System / akun tidak tersedia' }}
+                <span class="id"><br>User ID: {{ entry.actor_user_id if entry.actor_user_id is not none else '—' }}</span>
+              </td>
+              <td><span class="action">{{ entry.action }}</span></td>
+              <td class="entity">
+                <strong>{{ entry.entity_type }}</strong>
+                <span>{{ entry.entity_id }}</span>
+              </td>
+              <td>
+                {% if entry.old_value is not none %}
+                <details>
+                  <summary>Lihat data lama</summary>
+                  <pre>{{ entry.old_value|tojson }}</pre>
+                </details>
+                {% else %}<span class="id">—</span>{% endif %}
+              </td>
+              <td>
+                {% if entry.new_value is not none %}
+                <details>
+                  <summary>Lihat data terbaru</summary>
+                  <pre>{{ entry.new_value|tojson }}</pre>
+                </details>
+                {% else %}<span class="id">—</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty">
+        <strong>Belum ada aktivitas yang tercatat</strong>
+        Audit log akan muncul di sini setelah ada perubahan atau aktivitas yang dicatat.
+      </div>
+      {% endif %}
+    </section>
+  </main>
+</body>
+</html>

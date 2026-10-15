@@ -1,339 +1,743 @@
 <!doctype html>
 <html lang="id">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AMIGA | Antrean Pemrosesan</title>
-  <style>
-    :root{--navy:#14243a;--blue:#2563eb;--green:#16845b;--red:#b42318;--text:#243247;--muted:#718096;--line:#e3e9f2;--bg:#f4f6fa}
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,"Segoe UI",Arial,sans-serif}
-    a{color:inherit}
-    .topbar{background:#fff;border-bottom:1px solid var(--line);padding:17px max(20px,calc((100vw - 1420px)/2));display:flex;align-items:center;justify-content:space-between;gap:20px}
-    .brand{font-size:19px;font-weight:800;color:var(--navy)}
-    .brand span{color:var(--blue)}
-    .nav{display:flex;gap:10px}
-    .nav a,.button{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border:1px solid var(--line);border-radius:8px;background:#fff;text-decoration:none;font-size:12px;font-weight:700}
-    .nav a.active,.button.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
-    main{max-width:1420px;margin:auto;padding:28px 22px 42px}
-    .heading{display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:20px}
-    .heading h1{margin:0;color:var(--navy);font-size:clamp(23px,3vw,31px)}
-    .heading p{margin:6px 0 0;color:var(--muted);font-size:13px}
-    .live{display:flex;align-items:center;gap:8px;padding:8px 11px;border:1px solid var(--line);border-radius:8px;background:#fff;color:#56657a;font-size:11px}
-    .dot{width:8px;height:8px;border-radius:50%;background:#19a56b;box-shadow:0 0 0 4px #e8f7ef}
-    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
-    .stat,.panel{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 5px 18px #14243a0a}
-    .stat{padding:15px 16px}
-    .stat-label{font-size:11px;color:var(--muted)}
-    .stat-value{margin-top:7px;font-size:25px;line-height:1;font-weight:800;color:var(--navy)}
-    .stat-note{margin-top:6px;font-size:10px;color:var(--muted)}
-    .panel{overflow:hidden}
-    .panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 17px;border-bottom:1px solid var(--line)}
-    .panel-head h2{margin:0;font-size:14px;color:var(--navy)}
-    .panel-head p{margin:4px 0 0;font-size:11px;color:var(--muted)}
-    .updated{font-size:10px;color:var(--muted)}
-    .table-wrap{overflow:auto}
-    table{width:100%;border-collapse:collapse;min-width:900px}
-    th,td{padding:12px 15px;border-bottom:1px solid #edf0f5;text-align:left;vertical-align:middle}
-    th{background:#fafbfd;color:#68778d;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
-    td{font-size:12px}
-    tbody tr:last-child td{border-bottom:0}
-    .request{font-weight:800;color:var(--navy);white-space:nowrap}
-    .filename{max-width:260px;font-weight:700;overflow-wrap:anywhere}
-    .sub{display:block;margin-top:4px;color:var(--muted);font-size:10px}
-    .badge{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:999px;background:#eff3f8;color:#59677c;font-size:10px;font-weight:750;white-space:nowrap}
-    .badge.queued{background:#eff6ff;color:#2456a6}
-    .badge.processing{background:#fff6e5;color:#926000}
-    .badge.ready{background:#eaf7f1;color:#16845b}
-    .badge.exception{background:#fef3f2;color:#b42318}
-    .stage{min-width:170px}
-    .stage-text{font-size:11px;font-weight:650;color:#415169}
-    .stage-meta{display:flex;justify-content:space-between;gap:8px;margin-top:5px;color:var(--muted);font-size:9px}
-    .track{display:flex;gap:3px;margin-top:6px}
-    .track i{height:4px;flex:1;border-radius:4px;background:#e8edf4}
-    .track i.done{background:#3b82f6}
-    .track i.error{background:#e25b53}
-    .reviewed{color:var(--green);font-weight:750}
-    .not-reviewed{color:#8995a6}
-    .action{color:var(--blue);font-size:11px;font-weight:750;text-decoration:none;white-space:nowrap}
-    .action.disabled{color:#aab3c0;pointer-events:none}
-    .empty{padding:42px 20px;text-align:center;color:var(--muted);font-size:13px}
-    .error-text{display:block;max-width:250px;margin-top:4px;color:var(--red);font-size:10px;overflow-wrap:anywhere}
-    @media(max-width:760px){
-      .topbar{padding:14px 16px;align-items:flex-start;flex-direction:column}
-      .heading{align-items:flex-start;flex-direction:column}
-      .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
-      .updated{display:none}
-      main{padding:21px 12px 32px}
-    }
-  </style>
-</head>
-<body>
-  <header class="topbar">
-    <div class="brand"><span>AMIGA</span> | Invoice to Voucher</div>
-    <nav class="nav">
-      <a href="{{ url_for('upload.upload_page') }}">Upload dokumen</a>
-      <a class="active" href="{{ url_for('upload.queue_page') }}">Antrean kerja</a>
-    </nav>
-  </header>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AMIGA | Antrean Pemrosesan</title>
 
-  <main>
-    <section class="heading">
-      <div>
-        <h1>Dashboard Antrean Kerja</h1>
-        <p>Dokumen diproses otomatis sesuai nomor urut. Status diperbarui berkala.</p>
-      </div>
-      <div class="live">
-        <span class="dot"></span>
-        Memantau antrean
-        <span id="lastUpdated"></span>
-      </div>
-    </section>
-
-    <section class="stats" aria-label="Ringkasan status antrean">
-      <article class="stat">
-        <div class="stat-label">Total dokumen</div>
-        <div class="stat-value" id="countTotal">0</div>
-        <div class="stat-note">Semua dokumen terdaftar</div>
-      </article>
-      <article class="stat">
-        <div class="stat-label">Menunggu</div>
-        <div class="stat-value" id="countQueued">0</div>
-        <div class="stat-note">Diproses menurut nomor urut</div>
-      </article>
-      <article class="stat">
-        <div class="stat-label">Sedang diproses</div>
-        <div class="stat-value" id="countProcessing">0</div>
-        <div class="stat-note">Tahap OCR, ekstraksi, dan validasi</div>
-      </article>
-      <article class="stat">
-        <div class="stat-label">Siap Human Review</div>
-        <div class="stat-value" id="countReady">0</div>
-        <div class="stat-note">Belum termasuk exception</div>
-      </article>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <div>
-          <h2>Daftar dokumen</h2>
-          <p>Nomor antrean paling awal ditampilkan di atas.</p>
-        </div>
-        <span class="updated">Pembaruan otomatis setiap 4 detik</span>
-      </div>
-
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>No. antrean</th>
-              <th>Dokumen / klien</th>
-              <th>Status</th>
-              <th>Progres</th>
-              <th>Preview Human</th>
-              <th>Aksi</th>
-            </tr>
-          </thead>
-          <tbody id="queueBody">
-            {% for item in queue_items|sort(attribute='queue_number') %}
-            <tr>
-              <td>
-                <span class="request">AMG-{{ "%05d"|format(item.queue_number) }}</span>
-                <span class="sub">{{ item.queued_at[:16].replace("T", " ") if item.queued_at else "" }}</span>
-              </td>
-              <td>
-                <span class="filename">{{ item.original_filename }}</span>
-                <span class="sub">Klien: {{ item.client_name }}</span>
-              </td>
-              <td>
-                <span class="badge {% if item.status == 'READY_FOR_REVIEW' or item.status == 'APPROVED' %}ready{% elif item.status == 'EXCEPTION' or item.status == 'NEEDS_REVIEW' %}exception{% elif item.status == 'PROCESSING' %}processing{% else %}queued{% endif %}">
-                  {{ item.status.replace("_", " ") }}
-                </span>
-                {% if item.issue %}
-                  <span class="error-text">{{ item.issue }}</span>
-                {% endif %}
-              </td>
-              <td class="stage">
-                <span class="stage-text">{{ item.stage }}</span>
-                <span class="stage-meta">
-                  <span>Tahap {{ item.stage_step }}/3</span>
-                  <span>3 tahap</span>
-                </span>
-                <span class="track">
-                  {% for n in range(1, 4) %}
-                  <i class="{% if n <= item.stage_step %}{% if item.status == 'EXCEPTION' %}error{% else %}done{% endif %}{% endif %}"></i>
-                  {% endfor %}
-                </span>
-              </td>
-              <td>
-                {% if not item.review_available %}
-                  <span class="not-reviewed">Data belum tersedia</span>
-                {% elif item.previewed_at %}
-                  <span class="reviewed">Sudah dibuka</span>
-                {% else %}
-                  <span class="not-reviewed">Belum dibuka</span>
-                {% endif %}
-              </td>
-              <td>
-                {% if item.review_available and item.status in ['READY_FOR_REVIEW', 'NEEDS_REVIEW', 'EXCEPTION', 'APPROVED'] %}
-                  <a class="action" href="{{ item.review_url }}">
-                    {% if item.previewed_at %}Buka lagi{% else %}Preview{% endif %}
-                  </a>
-                {% else %}
-                  <span class="action disabled">Belum tersedia</span>
-                {% endif %}
-              </td>
-            </tr>
-            {% else %}
-            <tr>
-              <td colspan="6" class="empty">Belum ada dokumen. Upload invoice untuk menambah antrean.</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  </main>
-
-  <script>
-    const queueBody = document.getElementById("queueBody");
-
-    function escapeHtml(value) {
-      const entities = {
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;",
-      };
-
-      return String(value ?? "").replace(
-        /[&<>"']/g,
-        (character) => entities[character],
-      );
-    }
-
-    function getStatusClass(status) {
-      if (status === "READY_FOR_REVIEW" || status === "APPROVED") {
-        return "ready";
-      }
-
-      if (status === "EXCEPTION" || status === "NEEDS_REVIEW") {
-        return "exception";
-      }
-
-      return status === "PROCESSING" ? "processing" : "queued";
-    }
-
-    function renderQueue(items) {
-      items.sort((first, second) => first.queue_number - second.queue_number);
-
-      document.getElementById("countTotal").textContent = items.length;
-      document.getElementById("countQueued").textContent = items.filter(
-        (item) => item.status === "QUEUED",
-      ).length;
-      document.getElementById("countProcessing").textContent = items.filter(
-        (item) => item.status === "PROCESSING",
-      ).length;
-      document.getElementById("countReady").textContent = items.filter(
-        (item) => item.status === "READY_FOR_REVIEW",
-      ).length;
-
-      if (items.length === 0) {
-        queueBody.innerHTML =
-          '<tr><td colspan="6" class="empty">Belum ada dokumen. Upload invoice untuk menambah antrean.</td></tr>';
-        return;
-      }
-
-      const rows = items.map((item) => {
-        const canPreview =
-          item.review_available &&
-          [
-            "READY_FOR_REVIEW",
-            "NEEDS_REVIEW",
-            "EXCEPTION",
-            "APPROVED",
-          ].includes(item.status);
-
-        const step = Number(item.stage_step || 0);
-        const date = escapeHtml(item.queued_at)
-          .slice(0, 16)
-          .replace("T", " ");
-
-        const status = escapeHtml(item.status).replaceAll("_", " ");
-        const issue = item.issue
-          ? `<span class="error-text">${escapeHtml(item.issue)}</span>`
-          : "";
-
-        const progress = [1, 2, 3]
-          .map((number) => {
-            let className = "";
-
-            if (number <= step) {
-              className = item.status === "EXCEPTION" ? "error" : "done";
-            }
-
-            return `<i class="${className}"></i>`;
-          })
-          .join("");
-
-        const reviewStatus = !item.review_available
-          ? '<span class="not-reviewed">Data belum tersedia</span>'
-          : item.previewed_at
-            ? '<span class="reviewed">Sudah dibuka</span>'
-            : '<span class="not-reviewed">Belum dibuka</span>';
-
-        const action = canPreview
-          ? `<a class="action" href="${escapeHtml(item.review_url)}">${item.previewed_at ? "Buka lagi" : "Preview"}</a>`
-          : '<span class="action disabled">Belum tersedia</span>';
-
-        const cells = [
-          `<span class="request">AMG-${String(item.queue_number).padStart(5, "0")}</span><span class="sub">${date}</span>`,
-          `<span class="filename">${escapeHtml(item.original_filename)}</span><span class="sub">Klien: ${escapeHtml(item.client_name || "—")}</span>`,
-          `<span class="badge ${getStatusClass(item.status)}">${status}</span>${issue}`,
-          `<span class="stage-text">${escapeHtml(item.stage)}</span><span class="stage-meta"><span>Tahap ${step}/3</span><span>3 tahap</span></span><span class="track">${progress}</span>`,
-          reviewStatus,
-          action,
-        ];
-
-        const row = document.createElement("tr");
-        row.innerHTML = cells.map((cell) => `<td>${cell}</td>`).join("");
-        return row;
-      });
-
-      queueBody.replaceChildren(...rows);
-    }
-
-    async function refreshQueue() {
-      try {
-        const response = await fetch(
-          "{{ url_for('upload.queue_data') }}",
-          {
-            headers: { Accept: "application/json" },
-            cache: "no-store",
-          },
-        );
-
-        if (!response.ok) {
-          return;
+    <style>
+        :root {
+            --navy: #14243a;
+            --blue: #2563eb;
+            --green: #16845b;
+            --red: #b42318;
+            --text: #243247;
+            --muted: #718096;
+            --line: #e3e9f2;
+            --bg: #f4f6fa;
         }
 
-        const data = await response.json();
-        renderQueue(data.items || []);
+        * { box-sizing: border-box; }
 
-        document.getElementById("lastUpdated").textContent =
-          new Date().toLocaleTimeString("id-ID", {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          });
-      } catch (error) {
-        // Tetap tampilkan antrean terakhir jika pembaruan gagal.
-      }
-    }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: Inter, "Segoe UI", Arial, sans-serif;
+        }
 
-    refreshQueue();
-    setInterval(refreshQueue, 4000);
-  </script>
+        a { color: inherit; }
+
+        .topbar {
+            background: #fff;
+            border-bottom: 1px solid var(--line);
+            padding: 17px max(20px, calc((100vw - 1420px) / 2));
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .brand {
+            font-size: 19px;
+            font-weight: 800;
+            color: var(--navy);
+        }
+
+        .brand span { color: var(--blue); }
+
+        .nav {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav a,
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 40px;
+            padding: 0 14px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .nav a.active,
+        .button.primary {
+            background: var(--blue);
+            color: #fff;
+            border-color: var(--blue);
+        }
+
+        main {
+            max-width: 1420px;
+            margin: auto;
+            padding: 28px 22px 42px;
+        }
+
+        .heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .heading h1 {
+            margin: 0;
+            color: var(--navy);
+            font-size: clamp(23px, 3vw, 31px);
+        }
+
+        .heading p {
+            margin: 6px 0 0;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .live {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 11px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            color: #56657a;
+            font-size: 11px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #19a56b;
+            box-shadow: 0 0 0 4px #e8f7ef;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .stat,
+        .panel {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            box-shadow: 0 5px 18px #14243a0a;
+        }
+
+        .stat { padding: 15px 16px; }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .stat-value {
+            margin-top: 7px;
+            font-size: 25px;
+            line-height: 1;
+            font-weight: 800;
+            color: var(--navy);
+        }
+
+        .stat-note {
+            margin-top: 6px;
+            font-size: 10px;
+            color: var(--muted);
+        }
+
+        .panel { overflow: hidden; }
+
+        .panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 15px 17px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .panel-head h2 {
+            margin: 0;
+            font-size: 14px;
+            color: var(--navy);
+        }
+
+        .panel-head p {
+            margin: 4px 0 0;
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .updated {
+            font-size: 10px;
+            color: var(--muted);
+        }
+
+        .panel-tools {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .company-filter {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .company-filter label {
+            font-size: 10px;
+            font-weight: 700;
+            color: #56657a;
+        }
+
+        .company-filter select {
+            min-height: 34px;
+            max-width: 260px;
+            padding: 0 9px;
+            border: 1px solid var(--line);
+            border-radius: 7px;
+            background: #fff;
+            color: var(--text);
+            font: inherit;
+            font-size: 11px;
+        }
+
+        .table-wrap { overflow: auto; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 900px;
+        }
+
+        th,
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #edf0f5;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        th {
+            background: #fafbfd;
+            color: #68778d;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+
+        td { font-size: 12px; }
+
+        tbody tr:last-child td { border-bottom: 0; }
+
+        .request {
+            font-weight: 800;
+            color: var(--navy);
+            white-space: nowrap;
+        }
+
+        .filename {
+            max-width: 260px;
+            font-weight: 700;
+            overflow-wrap: anywhere;
+        }
+
+        .sub {
+            display: block;
+            margin-top: 4px;
+            color: var(--muted);
+            font-size: 10px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 8px;
+            border-radius: 999px;
+            background: #eff3f8;
+            color: #59677c;
+            font-size: 10px;
+            font-weight: 750;
+            white-space: nowrap;
+        }
+
+        .badge.queued {
+            background: #eff6ff;
+            color: #2456a6;
+        }
+
+        .badge.processing {
+            background: #fff6e5;
+            color: #926000;
+        }
+
+        .badge.ready {
+            background: #eaf7f1;
+            color: #16845b;
+        }
+
+        .badge.exception {
+            background: #fef3f2;
+            color: #b42318;
+        }
+
+        .stage { min-width: 170px; }
+
+        .stage-text {
+            font-size: 11px;
+            font-weight: 650;
+            color: #415169;
+        }
+
+        .stage-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            margin-top: 5px;
+            color: var(--muted);
+            font-size: 9px;
+        }
+
+        .track {
+            display: flex;
+            gap: 3px;
+            margin-top: 6px;
+        }
+
+        .track i {
+            height: 4px;
+            flex: 1;
+            border-radius: 4px;
+            background: #e8edf4;
+        }
+
+        .track i.done { background: #3b82f6; }
+        .track i.error { background: #e25b53; }
+        .reviewed { color: var(--green); font-weight: 750; }
+        .not-reviewed { color: #8995a6; }
+
+        .action {
+            color: var(--blue);
+            font-size: 11px;
+            font-weight: 750;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .action.disabled {
+            color: #aab3c0;
+            pointer-events: none;
+        }
+
+        .empty {
+            padding: 42px 20px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .error-text {
+            display: block;
+            max-width: 250px;
+            margin-top: 4px;
+            color: var(--red);
+            font-size: 10px;
+            overflow-wrap: anywhere;
+        }
+
+        @media (max-width: 760px) {
+            .topbar {
+                padding: 14px 16px;
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .heading {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .updated { display: none; }
+
+            .panel-head {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .panel-tools {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .company-filter {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .company-filter select { max-width: 100%; }
+
+            main { padding: 21px 12px 32px; }
+        }
+    </style>
+</head>
+
+<body
+    data-can-open-review="{{ 'true' if 'SYSTEM_ADMIN' in session.get('roles', []) or 'FINANCE_REVIEWER' in session.get('roles', []) else 'false' }}"
+    data-selected-company-id="{{ selected_company_id or '' }}"
+>
+    <header class="topbar">
+        <div class="brand"><span>AMIGA</span> | Invoice to Voucher</div>
+
+        <nav class="nav">
+            {% if "INTAKE_SUPPORT" in session.get("roles", []) %}
+                <a href="{{ url_for('upload.upload_page') }}">Upload dokumen</a>
+            {% endif %}
+
+            {% if "SYSTEM_ADMIN" in session.get("roles", []) %}
+                <a href="{{ url_for('auth.admin_dashboard') }}">Dashboard admin</a>
+            {% endif %}
+
+            <a class="active" href="{{ url_for('upload.queue_page') }}">Antrean kerja</a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="heading">
+            <div>
+                <h1>Dashboard Antrean Kerja</h1>
+                <p>Dokumen diproses otomatis sesuai nomor urut. Status diperbarui berkala.</p>
+            </div>
+
+            <div class="live">
+                <span class="dot"></span>
+                Memantau antrean
+                <span id="lastUpdated"></span>
+            </div>
+        </section>
+
+        <section class="stats" aria-label="Ringkasan status antrean">
+            <article class="stat">
+                <div class="stat-label">Total dokumen</div>
+                <div class="stat-value" id="countTotal">0</div>
+                <div class="stat-note">Semua dokumen terdaftar</div>
+            </article>
+
+            <article class="stat">
+                <div class="stat-label">Menunggu</div>
+                <div class="stat-value" id="countQueued">0</div>
+                <div class="stat-note">Diproses menurut nomor urut</div>
+            </article>
+
+            <article class="stat">
+                <div class="stat-label">Sedang diproses</div>
+                <div class="stat-value" id="countProcessing">0</div>
+                <div class="stat-note">Tahap OCR, ekstraksi, dan validasi</div>
+            </article>
+
+            <article class="stat">
+                <div class="stat-label">Siap Human Review</div>
+                <div class="stat-value" id="countReady">0</div>
+                <div class="stat-note">Belum termasuk exception</div>
+            </article>
+        </section>
+
+        <section class="panel">
+            <div class="panel-head">
+                <div>
+                    <h2>Daftar dokumen</h2>
+                    <p>Nomor antrean paling awal ditampilkan di atas.</p>
+                </div>
+
+                <div class="panel-tools">
+                    {% if ("SYSTEM_ADMIN" in session.get("roles", []) or "FINANCE_REVIEWER" in session.get("roles", [])) and companies %}
+                        <form
+                            class="company-filter"
+                            method="GET"
+                            action="{{ url_for('upload.queue_page') }}"
+                        >
+                            <label for="companyFilter">Perusahaan</label>
+                            <select
+                                id="companyFilter"
+                                name="company_id"
+                                onchange="this.form.submit()"
+                            >
+                                <option value="" {% if not selected_company_id %}selected{% endif %}>
+                                    Semua perusahaan
+                                </option>
+
+                                {% for company in companies %}
+                                    <option
+                                        value="{{ company.company_id }}"
+                                        {% if selected_company_id == company.company_id %}selected{% endif %}
+                                    >
+                                        {{ company.company_code }} — {{ company.company_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    {% endif %}
+
+                    <span class="updated">Pembaruan otomatis setiap 4 detik</span>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No. antrean</th>
+                            <th>Dokumen / klien</th>
+                            <th>Status</th>
+                            <th>Progres</th>
+                            <th>Preview Human</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="queueBody">
+                        {% for item in queue_items|sort(attribute='queue_number') %}
+                            <tr>
+                                <td>
+                                    <span class="request">AMG-{{ "%05d"|format(item.queue_number) }}</span>
+                                    <span class="sub">
+                                        {{ item.queued_at[:16].replace("T", " ") if item.queued_at else "" }}
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <span class="filename">{{ item.original_filename }}</span>
+                                    <span class="sub">
+                                        Perusahaan: {{ item.company_name or item.client_name }}
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <span class="badge {% if item.status == 'READY_FOR_REVIEW' or item.status == 'APPROVED' %}ready{% elif item.status == 'EXCEPTION' or item.status == 'NEEDS_REVIEW' %}exception{% elif item.status == 'PROCESSING' %}processing{% else %}queued{% endif %}">
+                                        {{ item.status.replace("_", " ") }}
+                                    </span>
+
+                                    {% if item.issue %}
+                                        <span class="error-text">{{ item.issue }}</span>
+                                    {% endif %}
+                                </td>
+
+                                <td class="stage">
+                                    <span class="stage-text">{{ item.stage }}</span>
+                                    <span class="stage-meta">
+                                        <span>Tahap {{ item.stage_step }}/3</span>
+                                        <span>3 tahap</span>
+                                    </span>
+
+                                    <span class="track">
+                                        {% for n in range(1, 4) %}
+                                            <i class="{% if n <= item.stage_step %}{% if item.status == 'EXCEPTION' %}error{% else %}done{% endif %}{% endif %}"></i>
+                                        {% endfor %}
+                                    </span>
+                                </td>
+
+                                <td>
+                                    {% if not item.review_available %}
+                                        <span class="not-reviewed">Data belum tersedia</span>
+                                    {% elif item.previewed_at %}
+                                        <span class="reviewed">Sudah dibuka</span>
+                                    {% else %}
+                                        <span class="not-reviewed">Belum dibuka</span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if ('SYSTEM_ADMIN' in session.get('roles', []) or 'FINANCE_REVIEWER' in session.get('roles', [])) and item.review_available and item.status in ['READY_FOR_REVIEW', 'NEEDS_REVIEW', 'EXCEPTION', 'APPROVED'] %}
+                                        <a class="action" href="{{ item.review_url }}">
+                                            {% if item.previewed_at %}Buka lagi{% else %}Preview{% endif %}
+                                        </a>
+                                    {% else %}
+                                        <span class="action disabled">Belum tersedia</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="6" class="empty">
+                                    Belum ada dokumen. Upload invoice untuk menambah antrean.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const queueBody = document.getElementById("queueBody");
+        const canOpenReview = document.body.dataset.canOpenReview === "true";
+        const selectedCompanyId = document.body.dataset.selectedCompanyId;
+
+        const queueDataUrl = new URL(
+            "{{ url_for('upload.queue_data') }}",
+            window.location.origin,
+        );
+
+        if (selectedCompanyId) {
+            queueDataUrl.searchParams.set("company_id", selectedCompanyId);
+        }
+
+        function escapeHtml(value) {
+            const entities = {
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;",
+            };
+
+            return String(value ?? "").replace(
+                /[&<>"']/g,
+                (character) => entities[character],
+            );
+        }
+
+        function getStatusClass(status) {
+            if (status === "READY_FOR_REVIEW" || status === "APPROVED") {
+                return "ready";
+            }
+
+            if (status === "EXCEPTION" || status === "NEEDS_REVIEW") {
+                return "exception";
+            }
+
+            return status === "PROCESSING" ? "processing" : "queued";
+        }
+
+        function renderQueue(items) {
+            items.sort((first, second) => first.queue_number - second.queue_number);
+
+            document.getElementById("countTotal").textContent = items.length;
+
+            document.getElementById("countQueued").textContent = items.filter(
+                (item) => item.status === "QUEUED",
+            ).length;
+
+            document.getElementById("countProcessing").textContent = items.filter(
+                (item) => item.status === "PROCESSING",
+            ).length;
+
+            document.getElementById("countReady").textContent = items.filter(
+                (item) => item.status === "READY_FOR_REVIEW",
+            ).length;
+
+            if (items.length === 0) {
+                queueBody.innerHTML =
+                    '<tr><td colspan="6" class="empty">Belum ada dokumen. Upload invoice untuk menambah antrean.</td></tr>';
+                return;
+            }
+
+            const rows = items.map((item) => {
+                const canPreview =
+                    canOpenReview &&
+                    item.review_available &&
+                    [
+                        "READY_FOR_REVIEW",
+                        "NEEDS_REVIEW",
+                        "EXCEPTION",
+                        "APPROVED",
+                    ].includes(item.status);
+
+                const step = Number(item.stage_step || 0);
+
+                const date = escapeHtml(item.queued_at)
+                    .slice(0, 16)
+                    .replace("T", " ");
+
+                const status = escapeHtml(item.status).replaceAll("_", " ");
+
+                const issue = item.issue
+                    ? `<span class="error-text">${escapeHtml(item.issue)}</span>`
+                    : "";
+
+                const progress = [1, 2, 3]
+                    .map((number) => {
+                        let className = "";
+
+                        if (number <= step) {
+                            className =
+                                item.status === "EXCEPTION" ? "error" : "done";
+                        }
+
+                        return `<i class="${className}"></i>`;
+                    })
+                    .join("");
+
+                const reviewStatus = !item.review_available
+                    ? '<span class="not-reviewed">Data belum tersedia</span>'
+                    : item.previewed_at
+                        ? '<span class="reviewed">Sudah dibuka</span>'
+                        : '<span class="not-reviewed">Belum dibuka</span>';
+
+                const action = canPreview
+                    ? `<a class="action" href="${escapeHtml(item.review_url)}">${item.previewed_at ? "Buka lagi" : "Preview"}</a>`
+                    : '<span class="action disabled">Belum tersedia</span>';
+
+                const cells = [
+                    `<span class="request">AMG-${String(item.queue_number).padStart(5, "0")}</span><span class="sub">${date}</span>`,
+                    `<span class="filename">${escapeHtml(item.original_filename)}</span><span class="sub">Perusahaan: ${escapeHtml(item.company_name || item.client_name || "—")}</span>`,
+                    `<span class="badge ${getStatusClass(item.status)}">${status}</span>${issue}`,
+                    `<span class="stage-text">${escapeHtml(item.stage)}</span><span class="stage-meta"><span>Tahap ${step}/3</span><span>3 tahap</span></span><span class="track">${progress}</span>`,
+                    reviewStatus,
+                    action,
+                ];
+
+                const row = document.createElement("tr");
+                row.innerHTML = cells.map((cell) => `<td>${cell}</td>`).join("");
+                return row;
+            });
+
+            queueBody.replaceChildren(...rows);
+        }
+
+        async function refreshQueue() {
+            try {
+                const response = await fetch(queueDataUrl, {
+                    headers: { Accept: "application/json" },
+                    cache: "no-store",
+                });
+
+                if (!response.ok) {
+                    return;
+                }
+
+                const data = await response.json();
+                renderQueue(data.items || []);
+
+                document.getElementById("lastUpdated").textContent =
+                    new Date().toLocaleTimeString("id-ID", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                    });
+            } catch (error) {
+                // Tetap tampilkan antrean terakhir jika pembaruan gagal.
+            }
+        }
+
+        refreshQueue();
+        setInterval(refreshQueue, 4000);
+    </script>
 </body>
 </html>

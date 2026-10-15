@@ -217,6 +217,39 @@
             gap: 11px;
         }
 
+        .company-picker {
+            flex: 0 0 230px;
+            display: grid;
+            gap: 6px;
+        }
+
+        .company-picker label {
+            color: var(--text);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .company-picker select {
+            width: 100%;
+            min-height: 46px;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #fff;
+            color: var(--text);
+            font: inherit;
+        }
+
+        .company-help {
+            color: var(--muted);
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .company-help.error {
+            color: #b42318;
+        }
+
         .file-picker {
             position: relative;
             flex: 1;
@@ -781,6 +814,23 @@
                 >
                     <input type="hidden" name="csrf_token" value="{{ token }}">
 
+                    <div class="company-picker">
+                        <label for="company_id">Perusahaan terdaftar</label>
+                        <select id="company_id" name="company_id" required {% if not companies %}disabled{% endif %}>
+                            <option value="">Pilih perusahaan</option>
+                            {% for company in companies|default([], true) %}
+                                <option value="{{ company['company_id'] }}">
+                                    {{ company['company_code'] }} — {{ company['company_name'] }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        {% if companies %}
+                            <small class="company-help">Pilihan mengikuti akses dari System Admin.</small>
+                        {% else %}
+                            <small class="company-help error">Belum ada akses perusahaan. Minta System Admin memberikan akses terlebih dahulu.</small>
+                        {% endif %}
+                    </div>
+
                     <div class="file-picker" id="fileDropZone">
                         <input
                             id="documentInput"
@@ -799,7 +849,7 @@
                         <div class="file-error" id="fileError" role="status" aria-live="polite"></div>
                     </div>
 
-                    <button class="button button-primary" id="uploadButton" type="submit">
+                    <button class="button button-primary" id="uploadButton" type="submit" {% if not companies %}disabled{% endif %}>
                         Upload dokumen
                     </button>
                 </form>
@@ -997,8 +1047,7 @@
                                                             value="{{ item.get('quantity') if item.get('quantity') is not none else '' }}"
                                                             aria-label="Jumlah item {{ loop.index }}"
                                                             readonly
-                                                        >
-                                                    </td>
+                                                        >                                                    </td>
                                                     <td>
                                                         <input
                                                             class="review-input money"
