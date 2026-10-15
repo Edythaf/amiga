@@ -814,6 +814,10 @@ def review_invoice(document_id):
 
 def prepare_voucher_pdf(document_id, invoice_index=0):
     paths = get_document_paths(document_id)
+    try:
+        invoice_index = int(invoice_index)
+    except (TypeError, ValueError):
+        abort(400)
 
     if not paths["metadata"].is_file():
         abort(404)
