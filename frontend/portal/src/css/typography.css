@@ -1,0 +1,175 @@
+/* AMIGA typography. Source: Google Fonts; SIL OFL files in public/fonts/.
+   Use local files in the app; the equivalent Google Fonts <link> is in the guide.
+   One fluid base (16–18px at default zoom), one ratio (1.25), three weights. */
+@font-face {
+  font-family: 'Figtree';
+  src: url('../../public/fonts/figtree-latin.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Newsreader';
+  src: url('../../public/fonts/newsreader-latin.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+}
+:root {
+  --font-heading: 'Newsreader', Georgia, serif;
+  --font-body: 'Figtree', 'Segoe UI', sans-serif;
+  --font-root-size: 100%;
+  --type-ratio: 1.25;
+  --text-base: clamp(1rem, .95rem + .25vw, 1.125rem);
+  --text-small: calc(var(--text-base) / var(--type-ratio));
+  --text-1: calc(var(--text-base) * var(--type-ratio));
+  --text-2: calc(var(--text-1) * var(--type-ratio));
+  --text-3: calc(var(--text-2) * var(--type-ratio));
+  --text-4: calc(var(--text-3) * var(--type-ratio));
+  --text-5: calc(var(--text-4) * var(--type-ratio));
+  --text-6: calc(var(--text-5) * var(--type-ratio));
+  --leading-body: 1.6;
+  --leading-ui: 1.5;
+  --leading-heading: 1.15;
+  --leading-subheading: 1.25;
+  --tracking-body: 0em;
+  --tracking-display: -.025em;
+  --tracking-heading: -.015em;
+  --tracking-label: .065em;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --measure-body: 70ch;
+  --measure-heading: 26ch;
+}
+html { font-size: var(--font-root-size); }
+body {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  letter-spacing: var(--tracking-body);
+  font-weight: var(--weight-regular);
+  font-synthesis: none;
+  font-optical-sizing: auto;
+}
+h1,h2,h3,h4,h5,h6 {
+  font-family: var(--font-heading);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-heading);
+  letter-spacing: var(--tracking-heading);
+  text-wrap: balance;
+  max-inline-size: var(--measure-heading);
+  margin-block: 0 1rem;
+  overflow-wrap: break-word;
+}
+h1 { font-size: var(--text-5); letter-spacing: var(--tracking-display); }
+h2 { font-size: var(--text-4); }
+h3 { font-size: var(--text-3); }
+h4 { font-size: var(--text-2); line-height: var(--leading-subheading); }
+h5 { font-size: var(--text-1); line-height: var(--leading-subheading); }
+h6 { font-size: var(--text-base); line-height: var(--leading-subheading); }
+p,li,dd {
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  hyphens: auto;
+  overflow-wrap: break-word;
+}
+p { max-inline-size: var(--measure-body); margin-block: .5rem 1rem; }
+small,caption,figcaption,.caption {
+  font-size: var(--text-small);
+  line-height: var(--leading-ui);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-body);
+}
+caption { text-align: start; caption-side: bottom; padding-block: .75rem; }
+caption,figcaption,.caption { color: var(--muted); max-inline-size: var(--measure-body); }
+strong,b { font-weight: var(--weight-semibold); }
+blockquote {
+  font-family: var(--font-heading);
+  font-size: var(--text-2);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-subheading);
+  letter-spacing: var(--tracking-heading);
+  font-variant-numeric: oldstyle-nums;
+  max-inline-size: 48ch;
+  border-inline-start: 3px solid var(--brand-pink);
+  padding-inline-start: 1.25rem;
+  margin: 2rem 0;
+  quotes: '“' '”' '‘' '’';
+}
+blockquote p { font-size: inherit; line-height: inherit; }
+a { color: var(--accent); text-underline-offset: .2em; text-decoration-thickness: .06em; }
+p a,li a,.prose a { text-decoration-line: underline; }
+a:hover { text-decoration-line: underline; }
+button,input,select,textarea {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-ui);
+  letter-spacing: var(--tracking-body);
+  font-weight: var(--weight-regular);
+}
+button { font-weight: var(--weight-medium); }
+label,summary { font-size: var(--text-base); font-weight: var(--weight-medium); line-height: var(--leading-ui); }
+code,kbd,pre,.key,.amount { font-family: var(--font-body); }
+pre,.changes { white-space: pre-wrap; overflow-wrap: anywhere; }
+table,input,.amount,.task-amount,.stat-number,.total-box strong,.donut-center strong,.completion-copy strong {
+  font-variant-numeric: lining-nums tabular-nums;
+}
+th { font-size: var(--text-small); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-body); text-transform: none; }
+td { font-size: var(--text-base); line-height: var(--leading-ui); }
+
+/* UI titles use the body family, leaving one editorial headline per screen. */
+.panel h2,.panel h3,.task-card h2,.work-progress h2 {
+  font-family: var(--font-body);
+  font-size: var(--text-1);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-subheading);
+  letter-spacing: var(--tracking-heading);
+  max-inline-size: none;
+}
+.login-card h2 { font-family: var(--font-heading); font-size: var(--text-3); font-weight: var(--weight-medium); }
+.login-story h1 { font-size: var(--text-6); max-inline-size: 16ch; letter-spacing: var(--tracking-display); }
+.login-story>p { font-size: var(--text-1); max-inline-size: 48ch; line-height: var(--leading-body); }
+.page-heading .subtle { max-inline-size: var(--measure-body); }
+.eyebrow,.card-kicker,.nav-label {
+  font-size: var(--text-small);
+  line-height: var(--leading-ui);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
+  text-transform: none;
+}
+.stat-number,.completion-copy>strong,.activity-summary>div>strong {
+  font-size: var(--text-4); font-weight: var(--weight-medium);
+  line-height: var(--leading-heading); letter-spacing: var(--tracking-heading);
+}
+.donut-center strong { font-size: var(--text-3); font-weight: var(--weight-medium); }
+.task-amount,.total-box strong { font-size: var(--text-2); font-weight: var(--weight-medium); }
+.subtle,.login-hint,.sidebar-card p,.login-assurance,.login-flow small,.task-intro small,
+.chart-note,.callout,.metric,.guide-step,.validation-flag p,.work-stages li {
+  font-size: var(--text-base); line-height: var(--leading-body);
+}
+.nav a,.sidebar-card strong,.task-intro strong { font-size: var(--text-base); }
+.tiny-tag,.status,.small,.stat-foot,.table-footer,.footer-note,.side-note,.login-foot,
+.portal-user small,.workspace-label,.demo-pill,.crumb,.admin-trigger,.chart-key,
+.legend-row,.day-label,.chart-gridlines span,.activity-bar span,.donut-center span,
+.team-person>small,.team-top>div>span {
+  font-size: var(--text-small); line-height: var(--leading-ui);
+}
+.status,.work-status,.work-stages li[aria-current] { font-weight: var(--weight-medium); }
+.portal-user strong,.team-top strong,.flag-title strong { font-size: var(--text-base); font-weight: var(--weight-medium); }
+.brand small { font-size: var(--text-small); line-height: var(--leading-ui); letter-spacing: var(--tracking-body); }
+.review-items input { font-size: var(--text-base); }
+.login-flow span,.task-intro span { font-size: var(--text-small); font-weight: var(--weight-medium); font-variant-numeric: tabular-nums; }
+.work-progress h2 { font-size: var(--text-1); }
+.specimen-display { font-size: var(--text-6); }
+@media print { body { color: #172f33; background: #fff; } }
+
+.work-progress-compact { font-size: var(--text-small); line-height: var(--leading-ui); font-weight: var(--weight-medium); }
+.assistant-header h2 { font-family:var(--font-body); font-size:var(--text-1); font-weight:var(--weight-medium); line-height:var(--leading-ui); letter-spacing:var(--tracking-body); }
+.assistant-header small,.assistant-context,.assistant-details>summary,.assistant-chat #agent-chat-form>label,.assistant-feedback { font-size:var(--text-small); line-height:var(--leading-ui); }
+.assistant-launcher,.assistant-chat { font-size:var(--text-base); line-height:var(--leading-body); }
+.assistant-header-actions button { font-size:var(--text-2); line-height:var(--leading-ui); }
+.assistant-chat .agent-answer>strong,.assistant-chat .agent-question>strong { font-size:var(--text-small); font-weight:var(--weight-medium); }
+.workspace-dialog,.reason-text,.review-reason { font-size:var(--text-base); line-height:var(--leading-body); }
+.workspace-dialog-head h2 { font-size:var(--text-1); font-weight:var(--weight-medium); line-height:var(--leading-heading); }
+.pdf-toolbar,.list-open-hint { font-size:var(--text-small); line-height:var(--leading-ui); }

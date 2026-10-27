@@ -1,0 +1,2 @@
+# Preserve source/archive hashes across Windows and Linux checkouts.
+* -text

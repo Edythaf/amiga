@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AMIGA · Sistem tipografi</title>
+  <!-- Alternative for a standalone online site; the portal uses local font files:
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&amp;family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&amp;display=swap" rel="stylesheet">
+  -->
+  <link rel="stylesheet" href="src/css/amiga-theme.css">
+  <link rel="stylesheet" href="src/css/typography.css">
+  <link rel="stylesheet" href="src/css/typography-specimen.css">
+</head>
+<body>
+  <header class="specimen-header">
+    <span class="brand-plate"><img class="brand-logo" src="public/brand/amiga-logo.png" alt="AMIGA" width="279" height="78"></span>
+    <div id="specimen-theme"></div>
+  </header>
+  <main class="specimen-main">
+    <section class="specimen-hero">
+      <div>
+        <p class="eyebrow">Panduan desain / Workspace invoice</p>
+        <h1>Angka yang jelas.<br>Keputusan yang terarah.</h1>
+        <p class="specimen-lead">Sistem tipografi untuk klien, reviewer keuangan, dan pengelola AMIGA. Tenang saat dibaca, tegas saat menentukan tindakan berikutnya.</p>
+      </div>
+      <aside class="specimen-note">
+        <p class="eyebrow">Dua keluarga, satu ritme</p>
+        <p><strong>Newsreader</strong><br>Judul utama dan kutipan editorial.</p>
+        <p><strong>Figtree</strong><br>Isi, navigasi, formulir, dan angka.</p>
+        <small>Skala 1,25 · Body 16–18 px · Weight 400 / 500 / 600</small>
+      </aside>
+    </section>
+
+    <section class="specimen-section prose">
+      <p class="eyebrow">01 / Contoh halaman kerja</p>
+      <h2>Periksa sebelum diterbitkan.</h2>
+      <p>Invoice PT Sinar Pagi sudah diambil Rani untuk diperiksa. Cocokkan rincian barang dan rekening dengan PDF, lalu simpan koreksi sebelum menerbitkan voucher.</p>
+      <p>Jika ada data yang belum lengkap, tulis bagian yang perlu diperbaiki agar klien tahu langkah berikutnya. <a href="#team-rules">Lihat panduan penulisan untuk tim.</a></p>
+      <blockquote>“Nomor rekening sudah cocok. Mohon periksa kembali diskon pada baris kedua sebelum voucher diterbitkan.”</blockquote>
+      <figure>
+        <div class="specimen-table-scroll">
+          <table>
+            <caption>Contoh data fiktif untuk menguji keterbacaan angka; bukan transaksi perusahaan.</caption>
+            <thead><tr><th scope="col">Invoice</th><th scope="col">Status pekerjaan</th><th scope="col" class="amount">Total</th></tr></thead>
+            <tbody>
+              <tr><td>INV-2026-1042</td><td>Sedang diperiksa Rani</td><td class="amount">Rp 12.450.000</td></tr>
+              <tr><td>INV-2026-1043</td><td>Menunggu bukti rekening</td><td class="amount">Rp 8.075.500</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </figure>
+      <div class="specimen-actions"><button class="primary" id="sample-action">Pratinjau voucher contoh</button><a href="#type-scale">Periksa hierarki teks</a></div>
+      <p id="sample-result" role="status" hidden>Ini contoh gaya tombol. Pada portal, voucher hanya diterbitkan setelah validasi dan persetujuan reviewer.</p>
+      <small>Catatan dan label membantu keputusan, tanpa berebut perhatian dengan judul.</small>
+    </section>
+
+    <section id="type-scale" class="specimen-section">
+      <p class="eyebrow">02 / Skala tipografi 1,25</p>
+      <div class="type-row"><span class="caption">H1 · langkah 5</span><h1>Ruang kerja klien</h1></div>
+      <div class="type-row"><span class="caption">H2 · langkah 4</span><h2>Dokumen bulan ini</h2></div>
+      <div class="type-row"><span class="caption">H3 · langkah 3</span><h3>Invoice yang perlu perhatian</h3></div>
+      <div class="type-row"><span class="caption">H4 · langkah 2</span><h4>Rincian pemeriksaan</h4></div>
+      <div class="type-row"><span class="caption">H5 · langkah 1</span><h5>Data rekening vendor</h5></div>
+      <div class="type-row"><span class="caption">H6 · dasar</span><h6>Bukti pendukung</h6></div>
+      <div class="type-row"><span class="caption">Body · dasar</span><p>Setiap perubahan memiliki alasan, penanggung jawab, dan riwayat yang dapat ditelusuri.</p></div>
+      <div class="type-row"><span class="caption">Small · langkah −1</span><small>Diperbarui 15 Oktober 2026 · 09.40 WIB</small></div>
+    </section>
+
+    <section id="team-rules" class="specimen-section prose">
+      <p class="eyebrow">03 / Aturan untuk tim</p>
+      <h2>Jaga ritmenya.</h2>
+      <ol>
+        <li><strong>Pakai token.</strong> Pilih ukuran dari skala; jangan menambahkan ukuran bebas per komponen.</li>
+        <li><strong>Satu judul utama.</strong> Newsreader memimpin halaman; Figtree menjaga tabel dan kontrol tetap jelas.</li>
+        <li><strong>Batasi penekanan.</strong> Body 400, tombol 500, penegasan 600. Hindari paragraf penuh bold atau kapital.</li>
+        <li><strong>Rawat angka dan kalimat.</strong> Angka tabel memakai tabular; paragraf maksimal 70ch. Jangan mengecilkan teks untuk memaksa tabel muat.</li>
+        <li><strong>Tulis tindakan konkret.</strong> Gunakan “Minta bukti rekening” atau “Unduh voucher”; hindari jargon, emoji judul, dan gradient text. Periksa terang, gelap, serta ponsel.</li>
+      </ol>
+    </section>
+  </main>
+  <footer class="specimen-footer"><p>Identitas warna dan logo: <a href="https://www.amiga.id/">AMIGA</a>. Font: <a href="https://fonts.google.com/specimen/Newsreader">Newsreader</a> dan <a href="https://fonts.google.com/specimen/Figtree">Figtree</a>, Google Fonts, SIL Open Font License.</p></footer>
+  <script type="module" src="src/js/typography-specimen.js"></script>
+</body>
+</html>

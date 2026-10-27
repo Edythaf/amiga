@@ -1,0 +1,10 @@
+{
+  "name":"amiga-workspace", "version":"0.2.0", "private":true, "type":"module",
+  "engines":{"node":">=22"},
+  "scripts":{
+    "dev":"node frontend/scripts/server.mjs",
+    "start":"node frontend/scripts/server.mjs",
+    "test":"node --test --test-isolation=none frontend/tests/domain.test.mjs frontend/tests/analytics.test.mjs frontend/tests/portal.test.mjs frontend/tests/money-input.test.mjs",
+    "build":"node frontend/scripts/build.mjs"
+  }
+}

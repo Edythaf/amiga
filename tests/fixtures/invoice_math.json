@@ -1,0 +1,7 @@
+[
+  {"name":"round each fractional-quantity line before summing","items":[["1.005","1","0","0","1.01"],["1.005","1","0","0","1.01"]],"discount":"0","tax":"0","reported":"2.02","subtotal":"2.02","total":"2.02","delta":"0.00"},
+  {"name":"six-decimal price and quantity plus half-cent invoice tax","items":[["0.333333","3.000001","0","0","1.00"]],"discount":"0","tax":"0.005","reported":"1.00","subtotal":"1.00","total":"1.01","delta":"0.01"},
+  {"name":"computed minus document delta stays negative","items":[["2","100","0","0","200"]],"discount":"10","tax":"5","reported":"200","subtotal":"200.00","total":"195.00","delta":"-5.00"},
+  {"name":"round only after item discount and tax","items":[["1","0.014","0.005","0","0.01"]],"discount":"0","tax":"0","reported":"0.01","subtotal":"0.01","total":"0.01","delta":"0.00"},
+  {"name":"reported fractional cents use same half-up rule","items":[["1","1","0","0","1"]],"discount":"0","tax":"0","reported":"1.005","subtotal":"1.00","total":"1.00","delta":"-0.01"}
+]

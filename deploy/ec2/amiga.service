@@ -1,0 +1,29 @@
+[Unit]
+Description=AMIGA invoice workspace
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=amiga
+Group=amiga
+WorkingDirectory=/opt/amiga
+EnvironmentFile=/etc/amiga/amiga.env
+Environment=AMIGA_ENV_FILE=/etc/amiga/amiga.env
+Environment=PYTHONUNBUFFERED=1
+ExecStartPre=/opt/amiga/.venv/bin/python deploy/ec2/preflight.py --env-file /etc/amiga/amiga.env
+ExecStart=/opt/amiga/.venv/bin/gunicorn --config deploy/ec2/gunicorn.conf.py backend.deployment:create_server()
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=190
+UMask=0077
+StateDirectory=amiga
+RuntimeDirectory=amiga
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/amiga /run/amiga
+
+[Install]
+WantedBy=multi-user.target

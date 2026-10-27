@@ -1,0 +1,34 @@
+/* Layout only. All type declarations come from typography.css. */
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); }
+.specimen-header,.specimen-main,.specimen-footer { max-width: 1200px; margin-inline: auto; padding-inline: clamp(24px,5vw,72px); }
+.specimen-header { display: flex; justify-content: space-between; align-items: center; padding-block: 28px; gap: 16px; border-bottom: 1px solid var(--line); }
+.specimen-hero { display: grid; grid-template-columns: 1.7fr 1fr; gap: 64px; align-items: end; padding-block: 72px; }
+.specimen-lead { max-inline-size: 50ch; }
+.eyebrow { color: var(--accent); }
+.specimen-note { background: var(--pink-soft); border-top: 3px solid var(--brand-pink); padding: 28px; border-radius: 0 0 12px 12px; }
+.specimen-section { padding-block: 48px; border-top: 1px solid var(--line); }
+.specimen-section h2 { margin-bottom: 24px; }
+.specimen-section li { max-inline-size: var(--measure-body); padding-left: 8px; margin-block: 16px; }
+.specimen-section ol { padding-left: 24px; }
+.type-row { display: grid; grid-template-columns: 11rem minmax(0,1fr); align-items: baseline; gap: 24px; padding-block: 22px; border-bottom: 1px solid var(--line); }
+.type-row :is(h1,h2,h3,h4,h5,h6,p) { margin: 0; }
+figure { margin: 28px 0; }
+table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+th,td { text-align: left; padding: 16px; border-bottom: 1px solid var(--line); }
+th { background: var(--surface-2); }
+.amount { text-align: right; }
+.specimen-table-scroll { overflow: auto; }
+.specimen-actions { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; margin-block: 24px; }
+button { cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 12px 18px; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.theme-control { display: flex; gap: 4px; }
+.theme-control button { display: grid; place-items: center; padding: 8px; }
+.theme-control button[aria-pressed='true'] { background: var(--accent-soft); border-color: var(--accent); }
+.specimen-footer { padding-block: 32px; border-top: 1px solid var(--line); }
+@media(max-width:760px) {
+  .specimen-hero { grid-template-columns: minmax(0,1fr); gap: 32px; padding-block: 40px; }
+  .type-row { grid-template-columns: minmax(0,1fr); gap: 12px; }
+  .specimen-header .brand-logo { width: 140px; }
+  .specimen-header .brand-plate { padding: 6px; }
+}

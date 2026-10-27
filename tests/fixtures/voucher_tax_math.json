@@ -1,0 +1,310 @@
+[
+  {
+    "name": "missing_both",
+    "fields": {
+      "total_amount": "1000000",
+      "subtotal": "1000000",
+      "invoice_tax_amount": "0",
+      "line_items": [
+        {
+          "tax_amount": "0"
+        }
+      ]
+    },
+    "plan": {
+      "vat_mode": "ADD",
+      "vat_rate": "11",
+      "vat_base": "1000000",
+      "withholding_mode": "DEDUCT",
+      "withholding_kind": "PPh",
+      "withholding_rate": "2",
+      "withholding_base": "1000000",
+      "source_withholding": "0",
+      "note": "Fixture"
+    },
+    "expected": {
+      "source_total": "1000000.00",
+      "source_vat": "0.00",
+      "source_withholding": "0.00",
+      "vat": "110000.00",
+      "withholding": "20000.00",
+      "vat_adjustment": "110000.00",
+      "withholding_adjustment": "20000.00",
+      "net_payable": "1090000.00"
+    }
+  },
+  {
+    "name": "existing_vat",
+    "fields": {
+      "total_amount": "1110000",
+      "subtotal": "1110000",
+      "invoice_tax_amount": "110000",
+      "line_items": [
+        {
+          "tax_amount": "0"
+        }
+      ]
+    },
+    "plan": {
+      "vat_mode": "KEEP",
+      "vat_rate": "11",
+      "vat_base": "1000000",
+      "withholding_mode": "DEDUCT",
+      "withholding_kind": "PPh",
+      "withholding_rate": "2",
+      "withholding_base": "1000000",
+      "source_withholding": "0",
+      "note": "Fixture"
+    },
+    "expected": {
+      "source_total": "1110000.00",
+      "source_vat": "110000.00",
+      "source_withholding": "0.00",
+      "vat": "110000.00",
+      "withholding": "20000.00",
+      "vat_adjustment": "0",
+      "withholding_adjustment": "20000.00",
+      "net_payable": "1090000.00"
+    }
+  },
+  {
+    "name": "correct_existing_vat",
+    "fields": {
+      "total_amount": "1110000",
+      "subtotal": "1110000",
+      "invoice_tax_amount": "110000",
+      "line_items": [
+        {
+          "tax_amount": "0"
+        }
+      ]
+    },
+    "plan": {
+      "vat_mode": "REPLACE",
+      "vat_rate": "12",
+      "vat_base": "1000000",
+      "withholding_mode": "DEDUCT",
+      "withholding_kind": "PPh",
+      "withholding_rate": "2",
+      "withholding_base": "1000000",
+      "source_withholding": "0",
+      "note": "Fixture"
+    },
+    "expected": {
+      "source_total": "1110000.00",
+      "source_vat": "110000.00",
+      "source_withholding": "0.00",
+      "vat": "120000.00",
+      "withholding": "20000.00",
+      "vat_adjustment": "10000.00",
+      "withholding_adjustment": "20000.00",
+      "net_payable": "1100000.00"
+    }
+  },
+  {
+    "name": "existing_pph",
+    "fields": {
+      "total_amount": "1090000",
+      "subtotal": "1090000",
+      "invoice_tax_amount": "110000",
+      "line_items": [
+        {
+          "tax_amount": "0"
+        }
+      ]
+    },
+    "plan": {
+      "vat_mode": "KEEP",
+      "vat_rate": "11",
+      "vat_base": "1000000",
+      "withholding_mode": "KEEP",
+      "withholding_kind": "PPh",
+      "withholding_rate": "2",
+      "withholding_base": "1000000",
+      "source_withholding": "20000",
+      "note": "Fixture"
+    },
+    "expected": {
+      "source_total": "1090000.00",
+      "source_vat": "110000.00",
+      "source_withholding": "20000.00",
+      "vat": "110000.00",
+      "withholding": "20000.00",
+      "vat_adjustment": "0",
+      "withholding_adjustment": "0",
+      "net_payable": "1090000.00"
+    }
+  },
+  {
+    "name": "correct_existing_pph",
+    "fields": {
+      "total_amount": "1090000",
+      "subtotal": "1090000",
+      "invoice_tax_amount": "110000",
+      "line_items": [
+        {
+          "tax_amount": "0"
+        }
+      ]
+    },
+    "plan": {
+      "vat_mode": "KEEP",
+      "vat_rate": "11",
+      "vat_base": "1000000",
+      "withholding_mode": "REPLACE",
+      "withholding_kind": "PPh",
+      "withholding_rate": "3",
+      "withholding_base": "1000000",
+      "source_withholding": "20000",
+      "note": "Fixture"
+    },
+    "expected": {
+      "source_total": "1090000.00",
+      "source_vat": "110000.00",
+      "source_withholding": "20000.00",
+      "vat": "110000.00",
+      "withholding": "30000.00",
+      "vat_adjustment": "0",
+      "withholding_adjustment": "10000.00",
+      "net_payable": "1080000.00"
+    }
+  },
+  {
+    "name": "half_up",
+    "fields": {
+      "total_amount": "1",
+      "subtotal": "1",
+      "invoice_tax_amount": "0",
+      "line_items": [
+        {
+          "tax_amount": "0"
+        }
+      ]
+    },
+    "plan": {
+      "vat_mode": "KEEP",
+      "vat_rate": "0",
+      "vat_base": "0",
+      "withholding_mode": "DEDUCT",
+      "withholding_kind": "PPh",
+      "withholding_rate": "2",
+      "withholding_base": "0.25",
+      "source_withholding": "0",
+      "note": "Fixture"
+    },
+    "expected": {
+      "source_total": "1.00",
+      "source_vat": "0.00",
+      "source_withholding": "0.00",
+      "vat": "0.00",
+      "withholding": "0.01",
+      "vat_adjustment": "0",
+      "withholding_adjustment": "0.01",
+      "net_payable": "0.99"
+    }
+  },
+  {
+    "name": "six_decimals",
+    "fields": {
+      "total_amount": "100",
+      "subtotal": "100",
+      "invoice_tax_amount": "0",
+      "line_items": [
+        {
+          "tax_amount": "0"
+        }
+      ]
+    },
+    "plan": {
+      "vat_mode": "ADD",
+      "vat_rate": "2.125",
+      "vat_base": "12.345678",
+      "withholding_mode": "DEDUCT",
+      "withholding_kind": "PPh",
+      "withholding_rate": "1.125",
+      "withholding_base": "7.654321",
+      "source_withholding": "0",
+      "note": "Fixture"
+    },
+    "expected": {
+      "source_total": "100.00",
+      "source_vat": "0.00",
+      "source_withholding": "0.00",
+      "vat": "0.26",
+      "withholding": "0.09",
+      "vat_adjustment": "0.26",
+      "withholding_adjustment": "0.09",
+      "net_payable": "100.17"
+    }
+  },
+  {
+    "name": "exact_manual_pph_deduct",
+    "fields": {
+      "total_amount": "1000",
+      "subtotal": "1000",
+      "invoice_tax_amount": "0",
+      "line_items": [
+        {
+          "tax_amount": "0"
+        }
+      ]
+    },
+    "plan": {
+      "vat_mode": "KEEP",
+      "vat_rate": "0",
+      "vat_base": "1000",
+      "withholding_mode": "DEDUCT",
+      "withholding_kind": "PPh",
+      "withholding_rate": "2",
+      "withholding_base": "1000",
+      "source_withholding": "0",
+      "withholding_amount": "123.45",
+      "note": "Reviewer exact correction fixture"
+    },
+    "expected": {
+      "source_total": "1000.00",
+      "source_vat": "0.00",
+      "source_withholding": "0.00",
+      "vat": "0.00",
+      "withholding": "123.45",
+      "vat_adjustment": "0",
+      "withholding_adjustment": "123.45",
+      "net_payable": "876.55"
+    }
+  },
+  {
+    "name": "exact_manual_pph_replace",
+    "fields": {
+      "total_amount": "900",
+      "subtotal": "1000",
+      "invoice_tax_amount": "0",
+      "line_items": [
+        {
+          "tax_amount": "0"
+        }
+      ]
+    },
+    "plan": {
+      "vat_mode": "KEEP",
+      "vat_rate": "0",
+      "vat_base": "1000",
+      "withholding_mode": "REPLACE",
+      "withholding_kind": "PPh",
+      "withholding_rate": "2",
+      "withholding_base": "1000",
+      "source_withholding": "100",
+      "withholding_amount": "123.45",
+      "note": "Reviewer exact correction fixture"
+    },
+    "expected": {
+      "source_total": "900.00",
+      "source_vat": "0.00",
+      "source_withholding": "100.00",
+      "vat": "0.00",
+      "withholding": "123.45",
+      "vat_adjustment": "0",
+      "withholding_adjustment": "23.45",
+      "net_payable": "876.55"
+    }
+  }
+]

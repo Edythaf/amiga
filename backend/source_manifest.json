@@ -1,0 +1,163 @@
+{
+  "source_archive": "amiga-20261015T221710Z-1-001.zip",
+  "archive_sha256": "f62bcdd402ca15ba59a0859813b77046c34a90aad3a553b308cf5a7fbb4f3f4a",
+  "integration_date": "2026-10-16",
+  "files": {
+    "backend/app.py": {
+      "source_sha256": "8ab919275f3bc97cbf35f6f1182d85ee4ce6c2320539221ab18fae955d19da88",
+      "integrated_sha256": "d1d69466a9a356e178c7caa6eb2a418f1163ecd2db5b084cdd8b25e3919f69f1",
+      "adapted": true
+    },
+    "backend/config.py": {
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "integrated_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "adapted": false
+    },
+    "backend/create_admin.py": {
+      "source_sha256": "592293d79e86d31285d5429ef3db327949c06a15e146ef359f7dbff7735913c6",
+      "integrated_sha256": "22ef4fac83c622eae233f5c240cb5080580834e6ab99a90d57fec73033a27928",
+      "adapted": true
+    },
+    "backend/requirements.txt": {
+      "source_sha256": "926c5f45e5323404401c4552573e9af06c617c0db28aca4e32008f2e051285e1",
+      "integrated_sha256": "82fb983d288555c12a4920d839c609650285b46b75fc6195a8d24ec896d850ca",
+      "adapted": true
+    },
+    "backend/voucher_service.py": {
+      "source_sha256": "5294ae9a3c67a8700d8737f2771d19e3d645a0277f20c78f7a1e21d09e853fab",
+      "integrated_sha256": "b3b1ce848392b135d1c96649d06eaea28cc4ed26cacdb5267e0264aa35c0b439",
+      "adapted": true
+    },
+    "backend/templates/queue.html": {
+      "source_sha256": "7ab3b736447ff6f0c5527a185e1d8daa3439604fac54cffaaa1ea193c9bb24f8",
+      "integrated_sha256": "7ab3b736447ff6f0c5527a185e1d8daa3439604fac54cffaaa1ea193c9bb24f8",
+      "adapted": false
+    },
+    "backend/templates/upload.html": {
+      "source_sha256": "b280a1a41907ea6dc426ef9653e9c033120c60586d8fd11ad79080986005e708",
+      "integrated_sha256": "b280a1a41907ea6dc426ef9653e9c033120c60586d8fd11ad79080986005e708",
+      "adapted": false
+    },
+    "backend/templates/voucher_preview.html": {
+      "source_sha256": "608f6be60b12611ec9152e8415fb8b03ca513922c42264b2615d94e4473e04d2",
+      "integrated_sha256": "608f6be60b12611ec9152e8415fb8b03ca513922c42264b2615d94e4473e04d2",
+      "adapted": false
+    },
+    "backend/modules/admin/routes.py": {
+      "source_sha256": "d352f899d01efebf3471373ab26fc89bc96fff15ad7113e29eecfa68e1eae0ce",
+      "integrated_sha256": "a018609e656110d8668c604b483fe6518fa554b232eb2fa870885692ffbb3ad6",
+      "adapted": true
+    },
+    "backend/modules/admin/__init__.py": {
+      "source_sha256": "4bf5aab039243cfa1333c172176c2598159718e290cf4fee99efecb0e30f1997",
+      "integrated_sha256": "4bf5aab039243cfa1333c172176c2598159718e290cf4fee99efecb0e30f1997",
+      "adapted": false
+    },
+    "backend/modules/auth/routes.py": {
+      "source_sha256": "7ea486a80be1bdae030cadf9ead396426b4e0d43c6a2dcfe965b17f493661e77",
+      "integrated_sha256": "658d21af29b55ddd1bbd5fda5a0954b325d0a63dec0f400b907c77d7cb9b7a69",
+      "adapted": true
+    },
+    "backend/modules/auth/__init__.py": {
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "integrated_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "adapted": false
+    },
+    "backend/modules/upload/queue_store.py": {
+      "source_sha256": "0626ac60adbfac3a371f4a1f9b9430fdf9363953d05afccdf54f45a65ab9ca67",
+      "integrated_sha256": "58543dd54bca3ba78bc522179a81c90d30824f7eeb751dbb17b52648d8507dfe",
+      "adapted": true
+    },
+    "backend/modules/upload/queue_worker.py": {
+      "source_sha256": "11d73d090daba9b0e8afeb25e04a33457f09b6434b3a4355aac8991202de4c26",
+      "integrated_sha256": "215696436e0c10c8493dd8473c853c147506c12f00c2ed988b6fab9bf885a432",
+      "adapted": true
+    },
+    "backend/modules/upload/routes.py": {
+      "source_sha256": "0552042374658accc683db53fbbb5ab4b197120bd74505077f1cb7b980bb0b58",
+      "integrated_sha256": "aa2f5ad5c83645f5490eea67f145877a9475722b5029a4eca2cf0313bcfa57c0",
+      "adapted": true
+    },
+    "backend/modules/upload/service.py": {
+      "source_sha256": "efe00b5c7ba83d2df93f3d7775be1d0569836dd4937122593e436ab1806aa835",
+      "integrated_sha256": "7f06f521ecac14d3a3aa0ba1b33dcb64a82887b6b5e3907a86b5e64139198371",
+      "adapted": true
+    }
+  },
+  "local_v5_added_files": {
+    "backend/manual_pdf.py": "564a04a63bbf8341c22e3c72c74184e72d9b9f8219adcc971b8b06ca0c4c188e",
+    "backend/signature_analysis.py": "93f694b8ea85cdb1341a5206504477531e8443a9d87f3eac78149af4debbb93d",
+    "backend/modules/upload/manual_routes.py": "263343ad26015a70c51d5c840fb3242b9327093cff57318d9a715eaa9c6a4fdb",
+    "frontend/portal/src/js/company-portal.js": "8d169c9850fbc5dd68d3df1c5cca35886aaf6b2742a1cdc26b4095c93a26f219",
+    "frontend/portal/src/js/manual-review.js": "879c1cc5fb826e7822d8ac8c802787ae71d92cbca7b7f1811f3792a5977e351d",
+    "migrations/005_company_manual_review.sql": "128f5a0f41838d8e08c0b1d847e24a26cf9a4b17e5be3b841f6f58cfa2ebca87"
+  },
+  "local_v6_added_files": {
+    "backend/modules/auth/password_routes.py": "399d2ae64a32e8f89035cd014e8368e0d3c9226727d6255ce67804f9aa1ebad5",
+    "backend/voucher_tax.py": "34576e144efd005d440b0bf678798aaca430e63cdf33754eeb52b047cd2fef82",
+    "backend/tax_analysis.py": "b0b03a5b7100da6a96f6d732e6d1947631e35d4a2d9495859c3f5fdcba87f597",
+    "backend/modules/upload/tax_routes.py": "49ac694f508f7bf7b441076bd6c28953f11e25cfee10ed0aa758f4a67339015b",
+    "backend/batch_intake.py": "6ee8521a4a4fa41286d280c75e72656db69f212e2327bb95c38d9868e429f5d7",
+    "backend/modules/upload/batch_routes.py": "c1c823e08c13c40498e01977a8ff0c3796fc006582ad5c94a932e8f8eaef5f72",
+    "frontend/portal/src/js/password-page.js": "7b70cda827c24e0818f2d7980c7def899c03bdfd6e3e42b0972a976dafb6ecb4",
+    "frontend/portal/src/js/voucher-tax.js": "d49115937d1886efd330dfa21eda103c39473759af8f49066bf501e18f40e436",
+    "frontend/portal/src/js/upload-page.js": "40e7528dbb0c9284449512f0aff5b4796642ff343cda3cedb3e8eda26c72bcff",
+    "migrations/006_tax_batch.sql": "4a91d8d8363290bf6fcd7ab52a5df2c4d36b2c24aa6efe975ad4474a599723d8",
+    "tests/fixtures/voucher_tax_math.json": "cc48895ec45600bc14aa9542e068b479bde4b39d990008cfd51b3a5220d38270",
+    "tests/backend/test_tax_batch.py": "68059a19086e12b7c1cd67152785cac3b664a7ac9c7fc7191d3b111e09307967",
+    "PEMBARUAN_V6.md": "3523e2bb87a9f7c92077ea722e87f6f46261d2c36929684dd7b39766ebaf6a68"
+  },
+  "local_v6_1_added_files": {
+    "frontend/portal/src/js/review-additions.js": "4425273659da08d7fd1541441778475798a78ecf273f179f92f3f004fae6c750",
+    "tests/backend/test_reviewer_additions.py": "22539825edeb7bd443b9799095834beb808df703e0ded9e43b3c8dbbaec680e2"
+  },
+  "local_v6_2_added_files": {
+    "frontend/portal/src/js/money-fields.js": "2a342e28d2fa47dfb88bf805ecc53a8e7f7d1c4109e757b056e5aa5d094c942b",
+    "frontend/portal/src/js/automatic-invoice.js": "316a94749f9c18421776fcbe8efdf7838c10189eb2a2bc60aae3ba752ee3851e",
+    "frontend/portal/src/js/invoice-inputs.js": "c2a4543df20b1480ba41e3254c6057898bb8cacb0885a3bc429713b32e325fad",
+    "frontend/tests/money-input.test.mjs": "63ee05c9de2938d4baa6de3b6ebd32fd6294bb3bcb2a476ab961739d1d0b8874"
+  },
+  "local_v6_3_added_files": {
+    "tests/backend/test_review_draft_sync.py": "3120dc633abe91975928b7fe91ff17a45ba9626d1c0dae4b6fdde246acb1d45e"
+  },
+  "local_v6_4_added_files": {
+    "frontend/portal/src/js/voucher-amounts.js": "007205ba212dc628635ec168f72619c6ab954403ae695558d0c3ce7e58858dc5"
+  },
+  "local_v6_5_added_files": {
+    "tests/backend/test_voucher_format.py": "d766a6bc32d9a2ada600e2aad97dd90f8ec542e131a4b991f6e567cd4bd321d4"
+  },
+  "local_v7_added_files": {
+    "backend/request_numbers.py": "0af1a50c0a867bded1c6e2a21e10a3a5b4fbe2300b48b3143d765d205a5b8a3d",
+    "frontend/portal/src/js/workspace-interactions.js": "2de65fea8b343efa310d9132cc92ff35dea0dae9d62d6fafef68938dd0e5377e",
+    "migrations/007_request_codes_review.sql": "cf7f904acd1f4800eda78ed2fb803dd0763a5310ce2e2fd9ab1368ded3ab1260",
+    "tests/backend/test_request_codes.py": "69068775fa4d6ea1eb42ccee37009ba325f315559dcae75ceb624de285d3faa6",
+    "PEMBARUAN_V7.md": "4e548bc5b0394753f68b5c341544648b7e8c3da7fdfbc64bc862960c4915d239"
+  },
+  "local_v7_1_updated_files": {
+    "frontend/portal/src/js/portal.js": "b4b7a954818d039d0860fe3f431789fe07e69755893ea770153056d7ad00a1b1",
+    "frontend/portal/src/js/work-progress.js": "90c54c788a240a30c6a870f7625879334af6ac12c373ac06a66e125aa7be9571",
+    "frontend/portal/src/js/task-workspace.js": "34b3e54b209dce91ca6e0c35a18e2d4058e85e0278c65de68f423493522f1b04",
+    "frontend/portal/src/js/uploader-workflow.js": "8ae152cfab8df90e9d613c250718357e17eea2177d2ee69cc081c22ee7722535",
+    "frontend/tests/portal.test.mjs": "173ae292d0295984076cb7d3f3a067401499747fab5b5dace628fff58f0fe837"
+  },
+  "local_v8_updated_files": {
+    "backend/telegram_automatic.py": "41535af89a7261889d6312dd116d965f00a02f063eb05c3d62121386e7fc3ed0",
+    "backend/models.py": "d15c4b9137da319eca50fc9a7d4b86b35ea8977718897f8761fcc01aa0c8ea9e",
+    "backend/api_common.py": "58162521c5e38412c17f8e69ab3aef517b97b2d46aadbbf428afb33af13bce1f",
+    "backend/application.py": "41c8be4c19329725b9844d9fcedb15ef5e493cad6360291bd019d8657e8a7c18",
+    "backend/schema.py": "d18a824fac53cdc3cbd45cdf53d78b9626030a9d7127f01a15b361da8d20a88b",
+    "backend/modules/telegram/routes.py": "80a62d6a9246b94588fef75ab222ea4caf1d7d091183b54eac04d5a1ff063751",
+    "backend/modules/upload/queue_worker.py": "68f7afb2db4cd0d019d57dc81b085eb19729c3fafb3485c0be3028207c89be84",
+    "frontend/portal/src/js/telegram-settings.js": "19c8220525fe54e6723d739d262eaf39ec3577877de88bec604cf5ae6a6aa166",
+    "frontend/portal/src/js/company-portal.js": "8d169c9850fbc5dd68d3df1c5cca35886aaf6b2742a1cdc26b4095c93a26f219",
+    "frontend/portal/src/js/agent-page.js": "9bce08bdbf93b4af49da2ee759719dd960dcfc5d55309129b482fa5267d0cd55",
+    "frontend/portal/src/js/api-client.js": "8bdaab6013d0626cfb2e31fa66600bdbb753b0da86d2b1a157c25c360851b3c3",
+    "frontend/tests/portal.test.mjs": "173ae292d0295984076cb7d3f3a067401499747fab5b5dace628fff58f0fe837",
+    "tests/backend/test_telegram_automatic.py": "da128414ff621d798bf7f71a3e245461ab761cef1f19678e6d0ab8bcfe8a3515",
+    "tests/backend/test_local_auth.py": "3e715f3f68642e257ea56078a53af0bda7a3758b10f031340ec439054574b20f",
+    "tests/backend/test_request_codes.py": "69068775fa4d6ea1eb42ccee37009ba325f315559dcae75ceb624de285d3faa6",
+    "tests/backend/test_lifecycle.py": "52e1f247098a29985357a0d97bd58903c2d49e73392cd89e25d50611f5c3f694",
+    "migrations/008_automatic_telegram.sql": "dfb29ae2e10a16db3ad2d2522ae745a625edd296593cbed67eac23fdd151989a",
+    "PEMBARUAN_V8.md": "6c29aaf71472a0b2c62c51bdbbd442640f7a6692d9e4181bf25aaa37d94542fb"
+  }
+}

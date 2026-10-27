@@ -1,0 +1,237 @@
+[
+  {
+    "id": "normal",
+    "label": "A • Invoice normal, 3 item",
+    "draft": {
+      "vendor_name": "PT Kertas Demo",
+      "invoice_number": "INV-DEMO-001",
+      "invoice_date": "2026-10-12",
+      "due_date": "2026-10-19",
+      "currency": "IDR",
+      "line_items": [
+        {
+          "description": "Kertas A4 (rim)",
+          "quantity": "10",
+          "unit_price": "25000",
+          "discount_amount": "0",
+          "tax_amount": "0",
+          "line_total": "250000"
+        },
+        {
+          "description": "Tinta printer (botol)",
+          "quantity": "2",
+          "unit_price": "150000",
+          "discount_amount": "0",
+          "tax_amount": "0",
+          "line_total": "300000"
+        },
+        {
+          "description": "Map dokumen (pak)",
+          "quantity": "20",
+          "unit_price": "5000",
+          "discount_amount": "0",
+          "tax_amount": "0",
+          "line_total": "100000"
+        }
+      ],
+      "subtotal": "650000",
+      "invoice_discount_amount": "0",
+      "invoice_tax_amount": "0",
+      "total_amount": "650000",
+      "bank_name": "Bank Fiktif Demo",
+      "account_number": "0000000001",
+      "account_holder": "PT Kertas Demo"
+    },
+    "sha256": "1c280aa7bf91448ce9f0fa0bdc71c72732065a60f76d043b7fd7c37da2f18a31",
+    "file": "normal.pdf",
+    "pages": 1
+  },
+  {
+    "id": "missing",
+    "label": "B • Invoice tanpa rekening",
+    "draft": {
+      "vendor_name": "PT Kertas Demo",
+      "invoice_number": "INV-DEMO-002",
+      "invoice_date": "2026-10-12",
+      "due_date": "2026-10-19",
+      "currency": "IDR",
+      "line_items": [
+        {
+          "description": "Kertas A4 (rim)",
+          "quantity": "10",
+          "unit_price": "25000",
+          "discount_amount": "0",
+          "tax_amount": "0",
+          "line_total": "250000"
+        },
+        {
+          "description": "Tinta printer (botol)",
+          "quantity": "2",
+          "unit_price": "150000",
+          "discount_amount": "0",
+          "tax_amount": "0",
+          "line_total": "300000"
+        },
+        {
+          "description": "Map dokumen (pak)",
+          "quantity": "20",
+          "unit_price": "5000",
+          "discount_amount": "0",
+          "tax_amount": "0",
+          "line_total": "100000"
+        }
+      ],
+      "subtotal": "650000",
+      "invoice_discount_amount": "0",
+      "invoice_tax_amount": "0",
+      "total_amount": "650000",
+      "bank_name": null,
+      "account_number": null,
+      "account_holder": null
+    },
+    "sha256": "a98a93395f38f4a4da5423b993d8332dfc3ddce9c08772c55ff68e00740dec43",
+    "file": "missing.pdf",
+    "pages": 1
+  },
+  {
+    "id": "duplicate",
+    "label": "D • Nomor sama, PDF berbeda",
+    "draft": {
+      "vendor_name": "PT Kertas Demo",
+      "invoice_number": "INV-DEMO-001",
+      "invoice_date": "2026-10-12",
+      "due_date": "2026-10-19",
+      "currency": "IDR",
+      "line_items": [
+        {
+          "description": "Kertas A4 (rim)",
+          "quantity": "10",
+          "unit_price": "25000",
+          "discount_amount": "0",
+          "tax_amount": "0",
+          "line_total": "250000"
+        },
+        {
+          "description": "Tinta printer (botol)",
+          "quantity": "2",
+          "unit_price": "150000",
+          "discount_amount": "0",
+          "tax_amount": "0",
+          "line_total": "300000"
+        },
+        {
+          "description": "Map dokumen (pak)",
+          "quantity": "20",
+          "unit_price": "5000",
+          "discount_amount": "0",
+          "tax_amount": "0",
+          "line_total": "100000"
+        }
+      ],
+      "subtotal": "650000",
+      "invoice_discount_amount": "0",
+      "invoice_tax_amount": "0",
+      "total_amount": "650000",
+      "bank_name": "Bank Fiktif Demo",
+      "account_number": "0000000001",
+      "account_holder": "PT Kertas Demo"
+    },
+    "sha256": "5cd3b92358b7ff2e1db15f67df935cb8098e4998b4925151eab71afda500c0f9",
+    "file": "duplicate.pdf",
+    "pages": 1
+  },
+  {
+    "id": "wrong-total",
+    "label": "G • Total salah Rp10.000",
+    "draft": {
+      "vendor_name": "PT Kertas Demo",
+      "invoice_number": "INV-DEMO-003",
+      "invoice_date": "2026-10-12",
+      "due_date": "2026-10-19",
+      "currency": "IDR",
+      "line_items": [
+        {
+          "description": "Kertas A4 (rim)",
+          "quantity": "10",
+          "unit_price": "25000",
+          "discount_amount": "0",
+          "tax_amount": "0",
+          "line_total": "250000"
+        },
+        {
+          "description": "Tinta printer (botol)",
+          "quantity": "2",
+          "unit_price": "150000",
+          "discount_amount": "0",
+          "tax_amount": "0",
+          "line_total": "300000"
+        },
+        {
+          "description": "Map dokumen (pak)",
+          "quantity": "20",
+          "unit_price": "5000",
+          "discount_amount": "0",
+          "tax_amount": "0",
+          "line_total": "100000"
+        }
+      ],
+      "subtotal": "650000",
+      "invoice_discount_amount": "0",
+      "invoice_tax_amount": "0",
+      "total_amount": "660000",
+      "bank_name": "Bank Fiktif Demo",
+      "account_number": "0000000001",
+      "account_holder": "PT Kertas Demo"
+    },
+    "sha256": "265ff6873b5e45459f3ace8c45ad78063ba49cfebdedba792e794e7848147c38",
+    "file": "wrong-total.pdf",
+    "pages": 1
+  },
+  {
+    "id": "ambiguous",
+    "label": "Alias vendor ambigu",
+    "draft": {
+      "vendor_name": "Vendor Bersama",
+      "invoice_number": "INV-DEMO-004",
+      "invoice_date": "2026-10-12",
+      "due_date": "2026-10-19",
+      "currency": "IDR",
+      "line_items": [
+        {
+          "description": "Kertas A4 (rim)",
+          "quantity": "10",
+          "unit_price": "25000",
+          "discount_amount": "0",
+          "tax_amount": "0",
+          "line_total": "250000"
+        },
+        {
+          "description": "Tinta printer (botol)",
+          "quantity": "2",
+          "unit_price": "150000",
+          "discount_amount": "0",
+          "tax_amount": "0",
+          "line_total": "300000"
+        },
+        {
+          "description": "Map dokumen (pak)",
+          "quantity": "20",
+          "unit_price": "5000",
+          "discount_amount": "0",
+          "tax_amount": "0",
+          "line_total": "100000"
+        }
+      ],
+      "subtotal": "650000",
+      "invoice_discount_amount": "0",
+      "invoice_tax_amount": "0",
+      "total_amount": "650000",
+      "bank_name": "Bank Fiktif Demo",
+      "account_number": "0000000001",
+      "account_holder": "PT Kertas Demo"
+    },
+    "sha256": "124d26060c319d9e8a0ce78b094b42ad2896944ae348d4758b27c0327c4c33e1",
+    "file": "ambiguous.pdf",
+    "pages": 1
+  }
+]

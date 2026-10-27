@@ -1,25 +1,32 @@
-# Python
-.venv/
-venv/
-__pycache__/
-*.py[cod]
-
-# Secrets and local credentials
 .env
-.env.*
-!.env.example
-.aws/
-
-# Local app data and uploaded documents
-instance/
-uploads/
-storage/
-backend/uploads/
+.env.local
+backend/.env
 backend/storage/
+__pycache__/
+node_modules/
+frontend/dist/
+*.log
+.venv/
+.runtime-temp/
+backend/requirements.lock
 
-# Local databases
+backend/.env.source
+
+# Server credentials and generated deployment artifacts stay private/local.
+deploy/**/*.env
+deploy/**/*.key
+deploy/**/*.pem
+*.tar.gz
+
+# Local reports, generated documents, databases and credential files.
+output/
+*.db
+*.db-wal
+*.db-shm
 *.sqlite
 *.sqlite3
-*.db/bedrock-request.json
-/bedrock-request-nova.json
-/bedrock-request.json
+*.key
+*.pem
+.session-secret
+.telegram-bot.json
+UJI_TELEGRAM_NYATA.md

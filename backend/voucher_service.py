@@ -1,350 +1,173 @@
+"""Single voucher PDF renderer. Display formatting never changes stored amounts."""
+from datetime import date, datetime
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP, localcontext
 from pathlib import Path
 from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
-from reportlab.platypus import (
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-)
+from reportlab.platypus import Paragraph, KeepTogether, SimpleDocTemplate, Spacer, Table, TableStyle
+
+TEAL = colors.HexColor('#276f77')
+INK = colors.HexColor('#193b3e')
+MUTED = colors.HexColor('#5c7477')
+LINE = colors.HexColor('#d5e2e3')
+PALE = colors.HexColor('#eef5f5')
 
 
 def _display(value):
-    """Ubah nilai kosong menjadi tanda strip dan amankan untuk PDF."""
-    if value is None:
-        return "-"
-
-    text = str(value).strip()
-    return text or "-"
+    return '-' if value is None or not str(value).strip() else str(value).strip()
 
 
 def _paragraph(value, style):
-    """Buat teks aman untuk ditampilkan sebagai Paragraph ReportLab."""
-    text = escape(_display(value)).replace("\n", "<br/>")
-    return Paragraph(text, style)
+    return Paragraph(escape(_display(value)).replace('\n', '<br/>'), style)
 
 
-def generate_voucher_pdf(
-    invoice_data,
-    output_path,
-    voucher_number,
-    requester_name=None,
-    approver_name=None,
-):
+def format_amount(value, currency='IDR', *, quantity=False):
+    """Indonesian separators, exact Decimal; unknown values remain unknown.
+
+    Prices/quantities retain up to six meaningful decimals; voucher totals have
+    already been rounded by the financial service. This only formats display.
     """
-    Buat PDF voucher dari data invoice yang sudah disetujui.
+    if value is None or value == '':
+        return '-'
+    try:
+        with localcontext() as ctx:
+            ctx.prec = 60
+            number = Decimal(str(value))
+            if not number.is_finite():
+                return '-'
+            number = number.quantize(Decimal('0.000001'), rounding=ROUND_HALF_UP)
+            raw = format(abs(number), ',.6f').rstrip('0').rstrip('.')
+            if not quantity and '.' in raw and len(raw.rsplit('.', 1)[1]) == 1:
+                raw += '0'
+            grouped = raw.translate(str.maketrans({',': '.', '.': ','}))
+            sign = '-' if number < 0 else ''
+            if quantity:
+                return sign + grouped
+            code = str(currency or '').strip().upper()
+            prefix = 'Rp' if code == 'IDR' else code
+            return f'{sign}{prefix} {grouped}'.strip()
+    except (InvalidOperation, ValueError, TypeError):
+        return '-'
 
-    Nilai total dan pajak hanya ditampilkan dari hasil ekstraksi.
-    Fungsi ini tidak menghitung ulang nilai invoice atau pajak.
-    """
-    output_path = Path(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    styles = getSampleStyleSheet()
+def format_date(value):
+    try:
+        return date.fromisoformat(str(value)).strftime('%d/%m/%Y')
+    except (ValueError, TypeError):
+        return _display(value)
 
-    title_style = ParagraphStyle(
-        "VoucherTitle",
-        parent=styles["Title"],
-        fontName="Helvetica-Bold",
-        fontSize=14,
-        leading=18,
-        alignment=TA_CENTER,
-        textColor=colors.HexColor("#14243a"),
-        spaceAfter=12,
-    )
 
-    label_style = ParagraphStyle(
-        "VoucherLabel",
-        parent=styles["BodyText"],
-        fontName="Helvetica-Bold",
-        fontSize=9,
-        leading=12,
-    )
+def _reviewed_date(value):
+    try:
+        from zoneinfo import ZoneInfo
+        parsed = datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+        if parsed.tzinfo:
+            return parsed.astimezone(ZoneInfo('Asia/Jakarta')).strftime('%d/%m/%Y %H:%M WIB')
+        return parsed.strftime('%d/%m/%Y %H:%M')
+    except (ValueError, TypeError):
+        return _display(value)
 
-    value_style = ParagraphStyle(
-        "VoucherValue",
-        parent=styles["BodyText"],
-        fontName="Helvetica",
-        fontSize=9,
-        leading=12,
-    )
 
-    header_style = ParagraphStyle(
-        "VoucherTableHeader",
-        parent=styles["BodyText"],
-        fontName="Helvetica-Bold",
-        fontSize=8,
-        leading=10,
-        alignment=TA_CENTER,
-        textColor=colors.white,
-    )
-
-    cell_style = ParagraphStyle(
-        "VoucherTableCell",
-        parent=styles["BodyText"],
-        fontName="Helvetica",
-        fontSize=8,
-        leading=10,
-    )
-
-    centered_cell_style = ParagraphStyle(
-        "VoucherCenteredCell",
-        parent=cell_style,
-        alignment=TA_CENTER,
-    )
-
-    right_cell_style = ParagraphStyle(
-        "VoucherRightCell",
-        parent=cell_style,
-        alignment=TA_RIGHT,
-    )
-
-    currency = _display(invoice_data.get("currency"))
-    total_amount = _display(invoice_data.get("total_amount"))
-
-    if currency != "-" and total_amount != "-":
-        if not total_amount.upper().startswith(currency.upper()):
-            total_amount = f"{currency} {total_amount}"
-
-    invoice_date = invoice_data.get("invoice_date")
-    service_period = invoice_data.get("service_period")
-    date_or_period = invoice_date or service_period
-
-    story = [
-        Paragraph("VOUCHER PENGELUARAN", title_style),
-    ]
-
-    summary_rows = [
-        [
-            _paragraph("Nomor", label_style),
-            _paragraph(voucher_number, value_style),
-        ],
-        [
-            _paragraph("Nama", label_style),
-            _paragraph(requester_name, value_style),
-        ],
-        [
-            _paragraph("Peruntukan", label_style),
-            _paragraph(invoice_data.get("purpose"), value_style),
-        ],
-        [
-            _paragraph("Tanggal / Periode", label_style),
-            _paragraph(date_or_period, value_style),
-        ],
-        [
-            _paragraph("Pemasok", label_style),
-            _paragraph(invoice_data.get("supplier_name"), value_style),
-        ],
-        [
-            _paragraph("Nominal", label_style),
-            _paragraph(total_amount, value_style),
-        ],
-    ]
-
-    summary_table = Table(
-        summary_rows,
-        colWidths=[42 * mm, 128 * mm],
-        hAlign="LEFT",
-    )
-    summary_table.setStyle(
-        TableStyle(
-            [
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-                ("TOPPADDING", (0, 0), (-1, -1), 7),
-                ("LINEBELOW", (0, 0), (-1, -1), 0.35, colors.HexColor("#d7deea")),
-            ]
-        )
-    )
-
-    story.extend([summary_table, Spacer(1, 8 * mm)])
-
-    bank_rows = [
-        [
-            _paragraph("Metode pembayaran", label_style),
-            _paragraph(invoice_data.get("payment_method"), value_style),
-            _paragraph("Nama bank", label_style),
-            _paragraph(invoice_data.get("supplier_bank_name"), value_style),
-        ],
-        [
-            _paragraph("Nomor rekening", label_style),
-            _paragraph(
-                invoice_data.get("supplier_bank_account_number"),
-                value_style,
-            ),
-            _paragraph("Nama pemilik rekening", label_style),
-            _paragraph(
-                invoice_data.get("supplier_bank_account_name"),
-                value_style,
-            ),
-        ],
-    ]
-
-    bank_table = Table(
-        bank_rows,
-        colWidths=[35 * mm, 50 * mm, 38 * mm, 47 * mm],
-        hAlign="LEFT",
-    )
-    bank_table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f5f7fb")),
-                ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#d7deea")),
-                ("INNERGRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#d7deea")),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 7),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 7),
-                ("TOPPADDING", (0, 0), (-1, -1), 7),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-            ]
-        )
-    )
-
-    story.extend(
-        [
-            bank_table,
-            Spacer(1, 8 * mm),
-        ]
-    )
-
-    line_items = invoice_data.get("line_items") or []
-
-    table_rows = [
-        [
-            _paragraph("No.", header_style),
-            _paragraph("Tanggal", header_style),
-            _paragraph("Keterangan", header_style),
-            _paragraph("Jumlah", header_style),
-            _paragraph("Harga", header_style),
-        ]
-    ]
-
-    if line_items:
-        for index, item in enumerate(line_items, start=1):
-            if not isinstance(item, dict):
-                continue
-
-            item_amount = (
-                item.get("line_total")
-                if item.get("line_total") is not None
-                else item.get("unit_price")
-            )
-
-            table_rows.append(
-                [
-                    _paragraph(item.get("line_number") or index, centered_cell_style),
-                    _paragraph(invoice_date, centered_cell_style),
-                    _paragraph(item.get("description"), cell_style),
-                    _paragraph(item.get("quantity"), centered_cell_style),
-                    _paragraph(item_amount, right_cell_style),
-                ]
-            )
-
-    if len(table_rows) == 1:
-        table_rows.append(
-            [
-                _paragraph("1", centered_cell_style),
-                _paragraph(invoice_date, centered_cell_style),
-                _paragraph(
-                    f"Pembayaran invoice {_display(invoice_data.get('invoice_number'))}",
-                    cell_style,
-                ),
-                _paragraph("1", centered_cell_style),
-                _paragraph(total_amount, right_cell_style),
-            ]
-        )
-
-    table_rows.append(
-        [
-            "",
-            "",
-            "",
-            _paragraph("TOTAL", label_style),
-            _paragraph(total_amount, right_cell_style),
-        ]
-    )
-
-    items_table = Table(
-        table_rows,
-        colWidths=[12 * mm, 30 * mm, 80 * mm, 20 * mm, 28 * mm],
-        repeatRows=1,
-        hAlign="LEFT",
-    )
-    items_table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#243b5a")),
-                ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#eef2f8")),
-                ("SPAN", (0, -1), (2, -1)),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 6),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-                ("TOPPADDING", (0, 0), (-1, -1), 7),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-                ("ALIGN", (0, 1), (1, -1), "CENTER"),
-                ("ALIGN", (3, 1), (4, -1), "RIGHT"),
-            ]
-        )
-    )
-
-    story.extend(
-        [
-            items_table,
-            Spacer(1, 16 * mm),
-        ]
-    )
-
-    signature_table = Table(
-        [
-            [
-                _paragraph("Diajukan Oleh", centered_cell_style),
-                _paragraph("Disetujui Oleh", centered_cell_style),
-            ],
-            [
-                Paragraph("<br/><br/><br/>", centered_cell_style),
-                Paragraph("<br/><br/><br/>", centered_cell_style),
-            ],
-            [
-                _paragraph(requester_name, centered_cell_style),
-                _paragraph(approver_name, centered_cell_style),
-            ],
-        ],
-        colWidths=[85 * mm, 85 * mm],
-        rowHeights=[10 * mm, 25 * mm, 10 * mm],
-        hAlign="CENTER",
-    )
-    signature_table.setStyle(
-        TableStyle(
-            [
-                ("BOX", (0, 0), (0, -1), 0.6, colors.HexColor("#9aa8ba")),
-                ("BOX", (1, 0), (1, -1), 0.6, colors.HexColor("#9aa8ba")),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 8),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-                ("TOPPADDING", (0, 0), (-1, -1), 4),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ]
-        )
-    )
-
-    story.append(signature_table)
-
-    pdf = SimpleDocTemplate(
-        str(output_path),
-        pagesize=A4,
-        rightMargin=20 * mm,
-        leftMargin=20 * mm,
-        topMargin=18 * mm,
-        bottomMargin=18 * mm,
-        title=f"Voucher Pengeluaran {voucher_number}",
-    )
-    pdf.build(story)
-
+def generate_voucher_pdf(invoice_data, output_path, voucher_number, requester_name=None,
+                         approver_name=None, *, draft=False, version=None, reviewed_at=None):
+    """Render supplied reviewed values; no invoice or tax recalculation here."""
+    is_stream = hasattr(output_path, 'write')
+    if not is_stream:
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+    body = ParagraphStyle('Body', fontName='Helvetica', fontSize=9, leading=13, textColor=INK)
+    bold = ParagraphStyle('Label', parent=body, fontName='Helvetica-Bold')
+    muted = ParagraphStyle('Muted', parent=body, fontSize=8, leading=11, textColor=MUTED)
+    title = ParagraphStyle('Title', parent=bold, fontSize=19, leading=24, spaceAfter=4)
+    section = ParagraphStyle('Section', parent=bold, fontSize=10, leading=14, spaceAfter=6)
+    small = ParagraphStyle('Cell', parent=body, fontSize=8, leading=11)
+    right = ParagraphStyle('Money', parent=small, fontSize=7.5, leading=10, alignment=TA_RIGHT)
+    center = ParagraphStyle('Center', parent=small, alignment=TA_CENTER)
+    header = ParagraphStyle('Header', parent=small, fontName='Helvetica-Bold', textColor=colors.white)
+    header_right = ParagraphStyle('HeaderRight', parent=header, alignment=TA_RIGHT)
+    total_style = ParagraphStyle('Final', parent=bold, fontSize=11, leading=16, alignment=TA_RIGHT)
+    currency = invoice_data.get('currency') or ''
+    amount = lambda value: format_amount(value, currency)
+    p = _paragraph
+    tax = invoice_data.get('voucher_tax')
+    total = amount(invoice_data.get('total_amount'))
+    story = [p('AMIGA / ADMINISTRASI INVOICE', muted),
+             p('VOUCHER PENGELUARAN', title),
+             p('DRAFT - Belum ditinjau AMIGA' if draft else 'Voucher resmi - Ditinjau AMIGA', bold),
+             p(' | '.join(part for part in [f'Versi invoice: {version}' if version is not None else '',
+                 f'Ditinjau: {_reviewed_date(reviewed_at)}' if reviewed_at else ''] if part), muted), Spacer(1, 3*mm)]
+    date_or_period = format_date(invoice_data.get('invoice_date')) if invoice_data.get('invoice_date') else invoice_data.get('service_period')
+    metadata = [[p('Nomor voucher',muted),p(voucher_number,body),'',''],
+        [p('Nomor invoice',muted),p(invoice_data.get('invoice_number'),body),p('Tanggal / Periode',muted),p(date_or_period,body)],
+        [p('Pemasok',muted),p(invoice_data.get('supplier_name'),body),p('Diajukan oleh',muted),p(requester_name,body)],
+        [p('Peruntukan',muted),p(invoice_data.get('purpose'),body),'','']]
+    # Full-width voucher/purpose rows and wrapping company names avoid clipping.
+    details = Table(metadata, colWidths=[29*mm,56*mm,29*mm,56*mm], hAlign='LEFT')
+    details.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP'),('LEFTPADDING',(0,0),(-1,-1),0),
+        ('SPAN',(1,0),(3,0)),('SPAN',(1,3),(3,3)),
+        ('RIGHTPADDING',(0,0),(-1,-1),8),('TOPPADDING',(0,0),(-1,-1),3),('BOTTOMPADDING',(0,0),(-1,-1),3)]))
+    story.extend([details,Spacer(1,4*mm),p('Informasi pembayaran',section)])
+    bank = Table([[p('Bank',muted),p(invoice_data.get('supplier_bank_name'),body),p('Nomor rekening',muted),p(invoice_data.get('supplier_bank_account_number'),body)],
+                  [p('Atas nama',muted),p(invoice_data.get('supplier_bank_account_name'),body),p('Metode',muted),p(invoice_data.get('payment_method'),body)]],
+                 colWidths=[22*mm,63*mm,30*mm,55*mm],hAlign='LEFT')
+    bank.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,-1),PALE),('BOX',(0,0),(-1,-1),.5,LINE),
+        ('VALIGN',(0,0),(-1,-1),'TOP'),('TOPPADDING',(0,0),(-1,-1),7),('BOTTOMPADDING',(0,0),(-1,-1),7)]))
+    story.extend([bank,Spacer(1,5*mm),p('Rincian barang / jasa',section),p('Mata uang: '+_display(currency)+' | Nominal memakai titik ribuan dan koma desimal.',muted),Spacer(1,2*mm)])
+    rows = [[p(label,header_right if index>2 else header) for index,label in enumerate(['No','Keterangan','Qty','Harga satuan','Diskon','Pajak','Total baris'])]]
+    for index,item in enumerate(invoice_data.get('line_items') or [],1):
+        if not isinstance(item,dict):
+            continue
+        rows.append([p(index,center),p(item.get('description'),small),p(format_amount(item.get('quantity'),quantity=True),center),
+                     *[p(amount(item.get(key)),right) for key in ['unit_price','discount_amount','tax_amount','line_total']]])
+    if len(rows)==1:
+        rows.append([p('1',center),p('Pembayaran invoice '+_display(invoice_data.get('invoice_number')),small),p('-',center),
+                     p('-',right),p('-',right),p('-',right),p(total,right)])
+    items = Table(rows,colWidths=[8*mm,48*mm,12*mm,27*mm,22*mm,22*mm,31*mm],repeatRows=1,splitInRow=1,hAlign='LEFT')
+    items.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0),TEAL),('ROWBACKGROUNDS',(0,1),(-1,-1),[colors.white,PALE]),
+        ('LINEBELOW',(0,0),(-1,0),.7,TEAL),('LINEBELOW',(0,1),(-1,-1),.35,LINE),
+        ('VALIGN',(0,0),(-1,-1),'TOP'),('LEFTPADDING',(0,0),(-1,-1),5),('RIGHTPADDING',(0,0),(-1,-1),5),
+        ('TOPPADDING',(0,0),(-1,-1),7),('BOTTOMPADDING',(0,0),(-1,-1),7)]))
+    story.extend([items,Spacer(1,3*mm)])
+    totals = [('Subtotal rincian',invoice_data.get('subtotal')),('Diskon invoice',invoice_data.get('invoice_discount_amount')),
+              ('Pajak invoice sebelum penyesuaian',invoice_data.get('tax_amount'))]
+    if tax:
+        calculated=tax['calculated']
+        totals.extend([('Total sebelum penyesuaian',calculated['source_total']),('Penyesuaian PPN',calculated['vat_adjustment']),
+                       ('Penyesuaian potongan '+tax['plan']['withholding_kind'],calculated['withholding_adjustment'])])
+    total_rows=[[p(label,body),p(amount(value),right)] for label,value in totals]
+    total_rows.append([p('TOTAL AKHIR VOUCHER',bold),p(total,total_style)])
+    summary = Table(total_rows,colWidths=[117*mm,53*mm],hAlign='LEFT')
+    summary.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP'),('TOPPADDING',(0,0),(-1,-1),3),('BOTTOMPADDING',(0,0),(-1,-1),3),
+        ('LINEABOVE',(0,-1),(-1,-1),.8,TEAL),('BACKGROUND',(0,-1),(-1,-1),PALE),
+        ('TOPPADDING',(0,-1),(-1,-1),9),('BOTTOMPADDING',(0,-1),(-1,-1),9)]))
+    story.extend([KeepTogether(summary),Spacer(1,3*mm)])
+    if tax and tax['plan'].get('note'):
+        story.extend([p('Catatan pemeriksaan reviewer',section),p(tax['plan']['note'],body),Spacer(1,3*mm)])
+    disclaimer=('DRAFT. Belum disetujui reviewer. Tidak dapat digunakan sebagai voucher resmi.' if draft else
+        'Voucher ini telah ditinjau oleh AMIGA. Persetujuan pembayaran dan pelaksanaan pembayaran merupakan kewenangan klien.')
+    story.extend([p(disclaimer,muted),Spacer(1,4*mm)])
+    signatures=Table([[p('Diajukan oleh',muted),p('Ditinjau oleh AMIGA',muted)],
+                      [Spacer(1,10*mm),Spacer(1,10*mm)],
+                      [p(requester_name,body),p(approver_name,body)]],colWidths=[85*mm,85*mm],hAlign='LEFT')
+    signatures.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP'),('TOPPADDING',(0,0),(-1,-1),3),
+        ('BOTTOMPADDING',(0,0),(-1,-1),3),('LINEABOVE',(0,2),(-1,2),.5,LINE)]))
+    story.append(KeepTogether(signatures))
+    pdf=SimpleDocTemplate(output_path if is_stream else str(output_path),pagesize=A4,rightMargin=20*mm,leftMargin=20*mm,
+        topMargin=16*mm,bottomMargin=17*mm,title=f'Voucher Pengeluaran {voucher_number}',author='AMIGA')
+    def decorate(canvas,document):
+        canvas.saveState()
+        canvas.setStrokeColor(LINE);canvas.line(20*mm,13*mm,190*mm,13*mm)
+        canvas.setFillColor(MUTED);canvas.setFont('Helvetica',7)
+        canvas.drawString(20*mm,9*mm,'AMIGA | Administrasi, bukan otorisasi pembayaran')
+        canvas.drawRightString(190*mm,9*mm,f'Halaman {document.page}')
+        if draft:
+            canvas.setFillColor(colors.Color(.75,.75,.75,alpha=.16));canvas.setFont('Helvetica-Bold',80)
+            canvas.translate(105*mm,148*mm);canvas.rotate(40);canvas.drawCentredString(0,0,'DRAFT')
+        canvas.restoreState()
+    pdf.build(story,onFirstPage=decorate,onLaterPages=decorate)
     return output_path
